@@ -1,0 +1,19 @@
+{
+  "manifest_version": 2,
+  "name": "Confine sites to their own containers",
+  "version": "1.0.0",
+  "icons": {
+  },
+
+  "permissions": [
+    "<all_urls>",
+    "cookies",
+    "contextualIdentities",
+		"webRequestBlocking",
+    "webRequest"
+  ],
+
+  "background": {
+    "scripts": ["background.js"]
+  }
+}
