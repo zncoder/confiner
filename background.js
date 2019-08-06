@@ -18,7 +18,7 @@ browser.webRequest.onBeforeRequest.addListener(
 	["blocking"])
 
 async function handleRequest(args) {
-	if (args.frameId !== 0 || args.tabId === -1 || disabled) {
+	if (disabled || args.frameId !== 0 || args.tabId === -1 || args.cookieStoreId !== "firefox-default") {
 		return {}
 	}
 	// get or create identity
@@ -48,11 +48,33 @@ function parseHost(url) {
 }
 
 async function getOrCreateIdentity(host) {
-	let arr = await browser.contextualIdentities.query({name: host})
-	if (arr.length > 0) {
-		return arr[0].cookieStoreId
+	let name = `${host}#cfn`
+	for (let k in allIdentities) {
+		if (k === name || k.endsWith("."+name) || name.endsWith("."+k)) {
+			return allIdentities[k]
+		}
 	}
 
-	let ident = await browser.contextualIdentities.create({name: host, color: "blue", icon: "fingerprint"})
+	let ident = await browser.contextualIdentities.create({name: name, color: "blue", icon: "fingerprint"})
+	console.log(`add ${ident.name} => ${ident.cookieStoreId}`)
+	allIdentities[ident.name] = ident.cookieStoreId
 	return ident.cookieStoreId
 }
+
+let allIdentities = {} 								// name => csid, don't allow dup name
+
+async function initAllIdentities() {
+	let idents = {}
+	let all = await browser.contextualIdentities.query({})
+	for (let x of all) {
+		if (x.name.endsWith("#cfn")) {
+			idents[x.name] = x.cookieStoreId
+		}
+	}
+	allIdentities = idents
+}
+
+async function init() {
+	await initAllIdentities()
+}
+init()
