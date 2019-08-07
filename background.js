@@ -3,8 +3,6 @@
 // - sites that are exempted stay in the current container
 // - open url in a tab with the contextualIdentities
 
-// reset the cookieStoreId if openerTabId is set
-
 let disabled
 
 browser.webRequest.onBeforeRequest.addListener(
@@ -13,9 +11,15 @@ browser.webRequest.onBeforeRequest.addListener(
 	["blocking"])
 
 let newTabs = new Set()
+let exemptedHosts = new Set()
 
 async function handleRequest(args) {
 	if (disabled || args.frameId !== 0 || args.tabId === -1) {
+		return {}
+	}
+
+	let host = parseHost(args.url)
+	if (exemptedHosts.has(host)) {
 		return {}
 	}
 
@@ -58,7 +62,6 @@ async function handleRequest(args) {
 	}
 
 	// get or create identity
-	let host = parseHost(args.url)
 	try {
 		let csid = await getOrCreateIdentity(host)
 		if (tab.cookieStoreId !== csid) {
@@ -111,11 +114,56 @@ async function initAllIdentities() {
 	allIdentities = idents
 }
 
+async function loadExemptedHosts() {
+	let obj = await browser.storage.local.get("exemptedHosts")
+	if (!obj.exemptedHosts) {
+		return
+	}
+	exemptedHosts = new Set(obj.exemptedHosts)
+}
+
+const hostsUrl = "https://raw.githubusercontent.com/zncoder/confiner/master/exemptedHosts.json"
+
+async function fetchExemptedHosts() {
+	try {
+		let js = await fetchJson(hostsUrl)
+		exemptedHosts = new Set(js)
+		browser.storage.local.set({"exemptedHosts": Array.from(exemptedHosts)})
+	} catch (e) {
+		console.log(`fetch exemptedHosts err:${e}`)
+	}
+}
+
+function fetchJson(url) {
+	return fetch(url)
+		.then(resp => {
+			if (!resp.ok) {
+				throw `not 200: ${resp.statusText}`
+			}
+			return resp.json()
+		})
+}
+
+async function refreshExemptedHosts() {
+	while (true) {
+		await wait(61*60*1000)
+		await fetchExemptedHosts()
+	}
+}
+
+function wait(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms))
+}
+
 async function init() {
 	await initAllIdentities()
+
 	browser.tabs.onCreated.addListener(tab => newTabs.add(tab.id))
 	// extension is not executed on all tabs, e.g. addons.mozilla.org.
 	// need to clean these tab ids from newTabs
 	browser.tabs.onRemoved.addListener(id => newTabs.delete(id))
+
+	loadExemptedHosts()
+	refreshExemptedHosts()
 }
 init()
