@@ -11,10 +11,14 @@
 		"cookies",
 		"contextualIdentities",
 		"storage",
+		"tabs",
 		"webRequestBlocking",
 		"webRequest"
 	],
 	"background": {
-		"scripts": ["background.js"]
+		"scripts": [
+			"freehosts.js",
+			"background.js"
+		]
 	}
 }

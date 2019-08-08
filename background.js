@@ -1,6 +1,6 @@
 // capture requests with onBeforeRequest listener
 // - create or get contextualIdentities for the site
-// - sites that are exempted stay in the current container
+// - sites that are free stay in the current container
 // - open url in a tab with the contextualIdentities
 
 let disabled
@@ -11,7 +11,16 @@ browser.webRequest.onBeforeRequest.addListener(
 	["blocking"])
 
 let newTabs = new Set()
-let exemptedHosts = new Set()
+let allContainers = [] 								// [[name, csid]], don't allow dup name
+
+function isFreeHost(host) {
+	for (let x of freeHosts) {
+		if (matchHost(x, host)) {
+			return true
+		}
+	}
+	return false
+}
 
 async function handleRequest(args) {
 	if (disabled || args.frameId !== 0 || args.tabId === -1) {
@@ -19,17 +28,11 @@ async function handleRequest(args) {
 	}
 
 	let host = parseHost(args.url)
-	if (exemptedHosts.has(host)) {
+	if (isFreeHost(host)) {
+		deleteNewTab(args.tabId)
 		return {}
 	}
 
-	let tab = await browser.tabs.get(args.tabId)
-	// possibly change container for new tab only and at most once
-	if (!newTabs.has(tab.id)) {
-		return {}
-	}
-	newTabs.delete(tab.id)
-	
 	// rules,
 	// - new tab opened by another tab
 	//    - (a) cookieStoreId is default: stay (user open tab in default)
@@ -39,40 +42,69 @@ async function handleRequest(args) {
 	// - new tab not opened by another tab
 	//    - (d) cookieStoreId is default: use host identity (new tab)
 	//    - (e) not default: stay (link in page)
-	if (tab.openerTabId) {
+	// - (f) old tab in default: use host identity (free host)
+	// - (g) old tab not in default: stay
+
+	let tab = await browser.tabs.get(args.tabId)
+	//console.log(`tab:${tab.id} url:${tab.url} arg:${args.url}`)
+	// possibly change container for new tab only and at most once
+	let isNew = newTabs.has(tab.id)
+	deleteNewTab(tab.id)
+	
+	if (!isNew) {
+		if (tab.cookieStoreId === "firefox-default") {
+			// case (f)
+			console.log(`tab:${tab.id} case f`)
+		} else {
+			// case (g)
+			console.log(`tab:${tab.id} case g`)
+			return {}
+		}
+	} else if (tab.openerTabId) {
 		if (tab.cookieStoreId === "firefox-default") {
 			// case (a)
+			console.log(`tab:${tab.id} case a`)
 			return {}
 		}
 		try {
 			let opener = await browser.tabs.get(tab.openerTabId)
 			if (opener.cookieStoreId !== tab.cookieStoreId) {
 				// case (c)
+				console.log(`tab:${tab.id} case c`)
 				return {}
 			}
 		} catch (e) {
 		}
 		// case (b)
+		console.log(`tab:${tab.id} case b`)
 	} else {
 		if (tab.cookieStoreId !== "firefox-default") {
 			// case (e)
+			console.log(`tab:${tab.id} case e`)
 			return {}
 		}
 		// case (d)
+		console.log(`tab:${tab.id} case d`)
 	}
 
-	// get or create identity
+	// get or create container
 	try {
-		let csid = await getOrCreateIdentity(host)
+		let csid = await getOrCreateContainer(host)
 		if (tab.cookieStoreId !== csid) {
 			// await so that tab is removed only if new tab is created successfully.
 			// in case container is disabled
+			let index = tab.index
+			if (!isNew) {
+				index++
+			}
 			await browser.tabs.create({
 				url: args.url,
 				cookieStoreId: csid,
-				index: tab.index,
+				index: index,
 				active: true})
-			browser.tabs.remove(tab.id)
+			if (isNew) {
+				browser.tabs.remove(tab.id)
+			}
 			return {cancel: true}
 		}
 	} catch (e) {
@@ -87,83 +119,54 @@ function parseHost(url) {
 	return a.host
 }
 
-async function getOrCreateIdentity(host) {
-	let name = `${host}#cfn`
-	for (let k in allIdentities) {
-		if (k === name || k.endsWith("."+name) || name.endsWith("."+k)) {
-			return allIdentities[k]
+function matchHost(a, b) {
+	return a === b || a.endsWith("."+b) || b.endsWith("."+a)
+}
+
+async function getOrCreateContainer(host) {
+	let name = `${host}·`
+	for (let x of allContainers) {
+		if (matchHost(x[0], name)) {
+			return x[1]
 		}
 	}
 
-	let ident = await browser.contextualIdentities.create({name: name, color: "blue", icon: "fingerprint"})
+	let ident = await browser.contextualIdentities.create({
+		name: name,
+		color: "blue",
+		icon: "fingerprint"})
 	console.log(`add ${ident.name} => ${ident.cookieStoreId}`)
-	allIdentities[ident.name] = ident.cookieStoreId
+	allContainers.push([ident.name, ident.cookieStoreId])
 	return ident.cookieStoreId
 }
 
-let allIdentities = {} 								// name => csid, don't allow dup name
-
-async function initAllIdentities() {
-	let idents = {}
+async function initAllContainers() {
+	let idents = []
 	let all = await browser.contextualIdentities.query({})
 	for (let x of all) {
-		if (x.name.endsWith("#cfn")) {
-			idents[x.name] = x.cookieStoreId
+		if (x.name.endsWith("·")) {
+			idents.push([x.name, x.cookieStoreId])
 		}
 	}
-	allIdentities = idents
+	allContainers = idents
 }
 
-async function loadExemptedHosts() {
-	let obj = await browser.storage.local.get("exemptedHosts")
-	if (!obj.exemptedHosts) {
-		return
-	}
-	exemptedHosts = new Set(obj.exemptedHosts)
+function addNewTab(id) {
+	//console.log(`add newtab:${id}`)
+	newTabs.add(id)
 }
 
-const hostsUrl = "https://raw.githubusercontent.com/zncoder/confiner/master/exemptedHosts.json"
-
-async function fetchExemptedHosts() {
-	try {
-		let js = await fetchJson(hostsUrl)
-		exemptedHosts = new Set(js)
-		browser.storage.local.set({"exemptedHosts": Array.from(exemptedHosts)})
-	} catch (e) {
-		console.log(`fetch exemptedHosts err:${e}`)
-	}
-}
-
-function fetchJson(url) {
-	return fetch(url)
-		.then(resp => {
-			if (!resp.ok) {
-				throw `not 200: ${resp.statusText}`
-			}
-			return resp.json()
-		})
-}
-
-async function refreshExemptedHosts() {
-	while (true) {
-		await wait(61*60*1000)
-		await fetchExemptedHosts()
-	}
-}
-
-function wait(ms) {
-	return new Promise(resolve => setTimeout(resolve, ms))
+function deleteNewTab(id) {
+	//console.log(`delete newtab:${id}`)
+	newTabs.delete(id)
 }
 
 async function init() {
-	await initAllIdentities()
+	await initAllContainers()
 
-	browser.tabs.onCreated.addListener(tab => newTabs.add(tab.id))
+	browser.tabs.onCreated.addListener(tab => addNewTab(tab.id))
 	// extension is not executed on all tabs, e.g. addons.mozilla.org.
 	// need to clean these tab ids from newTabs
-	browser.tabs.onRemoved.addListener(id => newTabs.delete(id))
-
-	loadExemptedHosts()
-	refreshExemptedHosts()
+	browser.tabs.onRemoved.addListener(id => deleteNewTab(id))
 }
 init()
