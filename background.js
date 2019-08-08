@@ -15,7 +15,7 @@ let allContainers = [] 								// [[name, csid]], don't allow dup name
 
 function isFreeHost(host) {
 	for (let x of freeHosts) {
-		if (matchHost(x, host)) {
+		if (x === host) {
 			return true
 		}
 	}
@@ -100,6 +100,7 @@ async function handleRequest(args) {
 			await browser.tabs.create({
 				url: args.url,
 				cookieStoreId: csid,
+				openerTabId: tab.id,
 				index: index,
 				active: true})
 			if (isNew) {
