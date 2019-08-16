@@ -2,7 +2,7 @@
 	"manifest_version": 2,
 	"name": "All Containers",
 	"description": "Confine every site to its own container to prevent site from tracking you",
-	"version": "1.3.0",
+	"version": "1.3.1",
 	"icons": {
 		"48": "icons/48.png"
 	},

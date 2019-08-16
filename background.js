@@ -136,6 +136,10 @@ const confiner = {
 		let name = `${host}·`
 		for (let x of this.allContainers) {
 			if (this.matchHost(x[0], name)) {
+				if (name.length < x[0].length) {
+					// use shorter name
+					await browser.contextualIdentities.update(x[1], {name: name})
+				}
 				return x[1]
 			}
 		}
