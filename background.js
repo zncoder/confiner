@@ -7,6 +7,7 @@ const confiner = {
 	disabled: false,
 	newTabs: new Set(),
 	allContainers: [],					 // [[name, csid]], don't allow dup name
+	allColors: ["blue", "turquoise", "green", "yellow", "orange", "red", "pink", "purple"],
 
 	isFreeHost(host) {
 		for (let x of freeHosts) {
@@ -132,6 +133,11 @@ const confiner = {
 		return a === b || a.endsWith("."+b) || b.endsWith("."+a)
 	},
 
+	randColor() {
+		let i = Math.floor(Math.random()*this.allColors.length)
+		return this.allColors[i]
+	},
+
 	async getOrCreateContainer(host) {
 		let name = `${host}·`
 		for (let x of this.allContainers) {
@@ -146,7 +152,7 @@ const confiner = {
 
 		let ident = await browser.contextualIdentities.create({
 			name: name,
-			color: "blue",
+			color: this.randColor(),
 			icon: "fingerprint"})
 		console.log(`add ${ident.name} => ${ident.cookieStoreId}`)
 		this.allContainers.push([ident.name, ident.cookieStoreId])
