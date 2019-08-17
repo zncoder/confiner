@@ -20,5 +20,10 @@
 			"freehosts.js",
 			"background.js"
 		]
+	},
+	"browser_action": {
+		"browser_style": true,
+		"default_icon": "icons/32.png",
+		"default_title": "Open tab in an ephemeral container"
 	}
 }

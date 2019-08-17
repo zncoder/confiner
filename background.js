@@ -150,12 +150,17 @@ const confiner = {
 			}
 		}
 
+		let csid = await newContainer(name)
+		console.log(`add ${name} => ${csid}`)
+		this.allContainers.push([name, csid])
+		return csid
+	},
+
+	async newContainer(name) {
 		let ident = await browser.contextualIdentities.create({
 			name: name,
 			color: this.randColor(),
 			icon: "fingerprint"})
-		console.log(`add ${ident.name} => ${ident.cookieStoreId}`)
-		this.allContainers.push([ident.name, ident.cookieStoreId])
 		return ident.cookieStoreId
 	},
 
@@ -170,6 +175,10 @@ const confiner = {
 		this.allContainers = idents
 	},
 
+	async initRandContainers() {
+
+	},
+
 	addNewTab(id) {
 		//console.log(`add newtab:${id}`)
 		this.newTabs.add(id)
@@ -180,9 +189,27 @@ const confiner = {
 		this.newTabs.delete(id)
 	},
 
+	randName() {
+		return Math.random().toString(36).substring(2, 10)
+	},
+
+	async newRandTab(url) {
+		let name = this.randName()
+		let csid = await this.newContainer(`${name}·~`)
+		return browser.tabs.create({
+			url: url,
+			cookieStoreId: csid,
+			active: true})
+	},
+
+	gcRandContainers() {
+	},
+
 	async init() {
 		await this.initAllContainers()
 
+		browser.browserAction.onClicked.addListener(() => this.newRandTab())
+		
 		browser.tabs.onCreated.addListener(tab => this.addNewTab(tab.id))
 		// extension is not executed on all tabs, e.g. addons.mozilla.org.
 		// need to clean these tab ids from newTabs
@@ -194,6 +221,8 @@ const confiner = {
 			arg => { return this.handleRequest(arg) },
 			{urls: ["<all_urls>"], types: ["main_frame"]},
 			["blocking"])
+
+		setInterval(() => gcRandContainers(), 3600*1000)
 	},
 }
 
