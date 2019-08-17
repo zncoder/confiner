@@ -10,6 +10,8 @@
 const confiner = {
 	newTabs: new Set(),
 	siteContainers: [],					 // [[name, csid]], don't allow dup name
+	// unused containers stay for one gc cycle
+	unusedContainers: new Set(),				 // csid of unused ephemeral containers
 
 	isFreeHost(host) {
 		for (let x of config.freeHosts) {
@@ -29,7 +31,7 @@ const confiner = {
 		// possibly change container for new tab only and at most once
 		let isNew = this.newTabs.has(tab.id)
 		//console.log(`tab:${tab.id} csid:${tab.cookieStoreId} ${isNew ? "new" : ""} url:${tab.url} arg:${arg.url}`)
-		this.deleteNewTab(tab.id)
+		this.newTabs.delete(tab.id)
 		let host = this.parseHost(arg.url)
 
 		if (await this.toStay(tab, host, isNew)) {
@@ -188,23 +190,23 @@ const confiner = {
 
 	},
 
-	addNewTab(id) {
+	addTab(id) {
 		//console.log(`add newtab:${id}`)
 		this.newTabs.add(id)
 	},
 
-	deleteNewTab(id) {
-		//console.log(`delete newtab:${id}`)
+	removeTab(id) {
+		//console.log(`remove tab:${id}`)
 		this.newTabs.delete(id)
 	},
 
 	randName() {
-		return Math.random().toString(36).substring(2, 10)
+		return Math.random().toString(36).substring(2, 10) + "·~"
 	},
 
 	async newRandTab(url) {
 		let name = this.randName()
-		let csid = await this.newContainer(`${name}·~`)
+		let csid = await this.newContainer(name)
 		return browser.tabs.create({
 			url: url,
 			cookieStoreId: csid,
@@ -219,10 +221,10 @@ const confiner = {
 
 		browser.browserAction.onClicked.addListener(() => this.newRandTab())
 		
-		browser.tabs.onCreated.addListener(tab => this.addNewTab(tab.id))
+		browser.tabs.onCreated.addListener(tab => this.addTab(tab.id))
 		// extension is not executed on all tabs, e.g. addons.mozilla.org.
 		// need to clean these tab ids from newTabs
-		browser.tabs.onRemoved.addListener(id => this.deleteNewTab(id))
+		browser.tabs.onRemoved.addListener(id => this.removeTab(id))
 		
 		browser.webRequest.onBeforeRequest.addListener(
 			// need to use this closure as the callback, not this.handleRequest,

@@ -17,7 +17,7 @@
 	],
 	"background": {
 		"scripts": [
-			"freehosts.js",
+			"config.js",
 			"background.js"
 		]
 	},

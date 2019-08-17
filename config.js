@@ -2,6 +2,7 @@ const config = {
 	freeHosts: [
 		"google.com",
 		"www.google.com",
+		"accounts.google.com",
 		"duckduckgo.com"
 	],
 
