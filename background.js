@@ -6,7 +6,7 @@
 const confiner = {
 	disabled: false,
 	newTabs: new Set(),
-	allContainers: [],					 // [[name, csid]], don't allow dup name
+	siteContainers: [],					 // [[name, csid]], don't allow dup name
 	allColors: ["blue", "turquoise", "green", "yellow", "orange", "red", "pink", "purple"],
 
 	isFreeHost(host) {
@@ -24,7 +24,7 @@ const confiner = {
 		}
 
 		let tab = await browser.tabs.get(arg.tabId)
-		console.log(`tab:${tab.id} url:${tab.url} arg:${arg.url}`)
+		//console.log(`tab:${tab.id} url:${tab.url} arg:${arg.url}`)
 		// possibly change container for new tab only and at most once
 		let isNew = this.newTabs.has(tab.id)
 		this.deleteNewTab(tab.id)
@@ -140,7 +140,7 @@ const confiner = {
 
 	async getOrCreateContainer(host) {
 		let name = `${host}·`
-		for (let x of this.allContainers) {
+		for (let x of this.siteContainers) {
 			if (this.matchHost(x[0], name)) {
 				if (name.length < x[0].length) {
 					// use shorter name
@@ -150,9 +150,9 @@ const confiner = {
 			}
 		}
 
-		let csid = await newContainer(name)
-		console.log(`add ${name} => ${csid}`)
-		this.allContainers.push([name, csid])
+		name = this.randName()
+		let csid = await this.newContainer(name)
+		console.log(`assign ${host} => ${name},${csid}`)
 		return csid
 	},
 
@@ -164,7 +164,7 @@ const confiner = {
 		return ident.cookieStoreId
 	},
 
-	async initAllContainers() {
+	async initSiteContainers() {
 		let idents = []
 		let all = await browser.contextualIdentities.query({})
 		for (let x of all) {
@@ -172,7 +172,7 @@ const confiner = {
 				idents.push([x.name, x.cookieStoreId])
 			}
 		}
-		this.allContainers = idents
+		this.siteContainers = idents
 	},
 
 	async initRandContainers() {
@@ -206,7 +206,7 @@ const confiner = {
 	},
 
 	async init() {
-		await this.initAllContainers()
+		await this.initSiteContainers()
 
 		browser.browserAction.onClicked.addListener(() => this.newRandTab())
 		
