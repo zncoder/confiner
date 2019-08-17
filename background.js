@@ -8,13 +8,11 @@
 // - gc ephemeral containers
 
 const confiner = {
-	disabled: false,
 	newTabs: new Set(),
 	siteContainers: [],					 // [[name, csid]], don't allow dup name
-	allColors: ["blue", "turquoise", "green", "yellow", "orange", "red", "pink", "purple"],
 
 	isFreeHost(host) {
-		for (let x of freeHosts) {
+		for (let x of config.freeHosts) {
 			if (x === host) {
 				return true
 			}
@@ -23,7 +21,7 @@ const confiner = {
 	},
 
 	async handleRequest(arg) {
-		if (this.disabled || arg.frameId !== 0 || arg.tabId === -1) {
+		if (config.disabled || arg.frameId !== 0 || arg.tabId === -1) {
 			return {}
 		}
 
@@ -145,8 +143,8 @@ const confiner = {
 	},
 
 	randColor() {
-		let i = Math.floor(Math.random()*this.allColors.length)
-		return this.allColors[i]
+		let i = Math.floor(Math.random()*config.colors.length)
+		return config.colors[i]
 	},
 
 	async getOrCreateContainer(host) {
