@@ -3,6 +3,10 @@
 // - sites that are free stay in the current container
 // - open url in a tab with the contextualIdentities
 
+// todo:
+// - recover site and ephemeral containers
+// - gc ephemeral containers
+
 const confiner = {
 	disabled: false,
 	newTabs: new Set(),
@@ -24,9 +28,9 @@ const confiner = {
 		}
 
 		let tab = await browser.tabs.get(arg.tabId)
-		//console.log(`tab:${tab.id} url:${tab.url} arg:${arg.url}`)
 		// possibly change container for new tab only and at most once
 		let isNew = this.newTabs.has(tab.id)
+		//console.log(`tab:${tab.id} csid:${tab.cookieStoreId} ${isNew ? "new" : ""} url:${tab.url} arg:${arg.url}`)
 		this.deleteNewTab(tab.id)
 		let host = this.parseHost(arg.url)
 
@@ -66,7 +70,9 @@ const confiner = {
 		// - new tab opened by another tab
 		//    - (a) cookieStoreId is default: stay (user open tab in default)
 		//    - cookieStoreId is not default
-		//        - (b) same as opener's cookieStoreId: use host identity (e.g. middle click)
+		//        - same as opener's cookieStoreId (e.g. middle click or link opens in new tab)
+		//            - (b) same host: stay
+		//            - (i) different host: use host identity
 		//        - (c) different cookieStoreId: stay (user open tab in this container)
 		// - new tab not opened by another tab
 		//    - (d) cookieStoreId is default: use host identity (new tab)
@@ -106,10 +112,15 @@ const confiner = {
 					console.log(`tab:${tab.id} case c`)
 					return true
 				}
+				if (this.parseHost(opener.url) === host) {
+					// case (b)
+					console.log(`tab:${tab.id} case b`)
+					return true
+				}					
 			} catch (e) {
 			}
-			// case (b)
-			console.log(`tab:${tab.id} case b`)
+			// case (i)
+			console.log(`tab:${tab.id} case i`)
 			return false
 		}
 		
