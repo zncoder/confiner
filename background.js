@@ -186,10 +186,6 @@ const confiner = {
 		this.siteContainers = idents
 	},
 
-	async initRandContainers() {
-
-	},
-
 	addTab(id) {
 		//console.log(`add newtab:${id}`)
 		this.newTabs.add(id)
@@ -204,7 +200,7 @@ const confiner = {
 		return Math.random().toString(36).substring(2, 10) + "·~"
 	},
 
-	async newRandTab(url) {
+	async newEphemeralTab(url) {
 		let name = this.randName()
 		let csid = await this.newContainer(name)
 		return browser.tabs.create({
@@ -213,13 +209,38 @@ const confiner = {
 			active: true})
 	},
 
-	gcRandContainers() {
+	async gcEphemeralContainers() {
+		let unused = new Set()
+		let all = await browser.contextualIdentities.query({})
+		for (let x of all) {
+			if (x.name.endsWith("·~")) {
+				unused.add(x.cookieStoreId)
+			}
+		}
+
+		let tabs = await browser.tabs.query({})
+		for (let t of tabs) {
+			unused.delete(t.cookieStoreId)
+		}
+
+		let dead = []
+		for (let x of this.unusedContainers) {
+			if (unused.has(x)) {
+				dead.push(x)
+				unused.delete(x)
+			}
+		}
+		if (dead.length > 0) {
+			console.log(`remove ${dead.length} dead csids`)
+			await Promise.all(dead.map(x => browser.contextualIdentities.remove(x)))
+		}
+		this.unusedContainers = unused
 	},
 
 	async init() {
 		await this.initSiteContainers()
 
-		browser.browserAction.onClicked.addListener(() => this.newRandTab())
+		browser.browserAction.onClicked.addListener(() => this.newEphemeralTab())
 		
 		browser.tabs.onCreated.addListener(tab => this.addTab(tab.id))
 		// extension is not executed on all tabs, e.g. addons.mozilla.org.
@@ -233,7 +254,7 @@ const confiner = {
 			{urls: ["<all_urls>"], types: ["main_frame"]},
 			["blocking"])
 
-		setInterval(() => gcRandContainers(), 3600*1000)
+		setInterval(() => this.gcEphemeralContainers(), config.gcInterval)
 	},
 }
 
