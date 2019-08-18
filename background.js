@@ -3,10 +3,6 @@
 // - sites that are free stay in the current container
 // - open url in a tab with the contextualIdentities
 
-// todo:
-// - recover site and ephemeral containers
-// - gc ephemeral containers
-
 const confiner = {
 	newTabs: new Set(),
 	siteContainers: new Map(),					 // csid -> name
@@ -145,12 +141,12 @@ const confiner = {
 	},
 
 	randColor() {
-		let i = Math.floor(Math.random()*config.colors.length)
-		return config.colors[i]
+		let i = Math.floor(Math.random()*config.randColors.length)
+		return config.randColors[i]
 	},
 
 	async getOrCreateContainer(host) {
-		let name = `${host}·`
+		let name = host+"·"
 		for (let x of this.siteContainers) {
 			if (this.matchHost(x[1], name)) {
 				if (name.length < x[1].length) {
@@ -168,10 +164,11 @@ const confiner = {
 	},
 
 	async newContainer(name) {
+		let isRand = name.endsWith("·~")
 		let ident = await browser.contextualIdentities.create({
 			name: name,
-			color: this.randColor(),
-			icon: "fingerprint"})
+			color: isRand ? this.randColor() : config.siteColor,
+			icon: isRand ? config.ephemeralIcon : config.siteIcon})
 		return ident.cookieStoreId
 	},
 
@@ -200,13 +197,25 @@ const confiner = {
 		return Math.random().toString(36).substring(2, 10) + "·~"
 	},
 
-	async newEphemeralTab(url) {
-		let name = this.randName()
-		let csid = await this.newContainer(name)
-		return browser.tabs.create({
-			url: url,
-			cookieStoreId: csid,
-			active: true})
+	async toggleEphemeralContainer() {
+		let tabs = await browser.tabs.query({active: true, currentWindow: true})
+		let tab = tabs[0]
+		let csid = tab.cookieStoreId
+		if (csid === "firefox-default") {
+			return
+		}
+
+		let toRand = this.siteContainers.has(csid)
+		let name = toRand ? this.randName() : this.parseHost(tab.url)+"·"
+		let color = toRand ? this.randColor() : config.siteColor
+		let icon = toRand ? config.ephemeralIcon : config.siteIcon
+		if (toRand) {
+			this.siteContainers.delete(csid)
+		} else {
+			this.siteContainers.set(csid, name)
+		}
+		console.log(`toggle ${csid} to ${name}`)
+		return browser.contextualIdentities.update(csid, {name: name, color: color, icon: icon})
 	},
 
 	async gcEphemeralContainers() {
@@ -240,7 +249,7 @@ const confiner = {
 	async init() {
 		await this.initSiteContainers()
 
-		browser.browserAction.onClicked.addListener(() => this.newEphemeralTab())
+		browser.browserAction.onClicked.addListener(() => this.toggleEphemeralContainer())
 		
 		browser.tabs.onCreated.addListener(tab => this.addTab(tab.id))
 		// extension is not executed on all tabs, e.g. addons.mozilla.org.
