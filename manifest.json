@@ -1,8 +1,8 @@
 {
 	"manifest_version": 2,
 	"name": "All Containers",
-	"description": "Confine every site to its own container to prevent site from tracking you",
-	"version": "1.4.0",
+	"description": "Confine every site to either an ephemeral container or a site specific container",
+	"version": "1.4.1",
 	"icons": {
 		"48": "icons/48.png"
 	},
