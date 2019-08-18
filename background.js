@@ -9,7 +9,7 @@
 
 const confiner = {
 	newTabs: new Set(),
-	siteContainers: [],					 // [[name, csid]], don't allow dup name
+	siteContainers: new Map(),					 // csid -> name
 	// unused containers stay for one gc cycle
 	unusedContainers: new Set(),				 // csid of unused ephemeral containers
 
@@ -152,12 +152,12 @@ const confiner = {
 	async getOrCreateContainer(host) {
 		let name = `${host}·`
 		for (let x of this.siteContainers) {
-			if (this.matchHost(x[0], name)) {
-				if (name.length < x[0].length) {
+			if (this.matchHost(x[1], name)) {
+				if (name.length < x[1].length) {
 					// use shorter name
-					await browser.contextualIdentities.update(x[1], {name: name})
+					await browser.contextualIdentities.update(x[0], {name: name})
 				}
-				return x[1]
+				return x[0]
 			}
 		}
 
@@ -176,14 +176,14 @@ const confiner = {
 	},
 
 	async initSiteContainers() {
-		let idents = []
+		let m = new Map()
 		let all = await browser.contextualIdentities.query({})
 		for (let x of all) {
 			if (x.name.endsWith("·")) {
-				idents.push([x.name, x.cookieStoreId])
+				m.set(x.cookieStoreId, x.name)
 			}
 		}
-		this.siteContainers = idents
+		this.siteContainers = m
 	},
 
 	addTab(id) {
