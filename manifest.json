@@ -1,8 +1,8 @@
 {
 	"manifest_version": 2,
-	"name": "All Containers",
+	"name": "Ephemeral or Confined Container",
 	"description": "Confine every site to either an ephemeral container or a site specific container",
-	"version": "1.4.1",
+	"version": "1.5.0",
 	"icons": {
 		"48": "icons/48.png"
 	},
@@ -23,6 +23,7 @@
 	},
 	"browser_action": {
 		"browser_style": true,
+		"default_popup": "page.html",
 		"default_icon": "icons/32.png",
 		"default_title": "Toggle container between confined and ephemeral"
 	}

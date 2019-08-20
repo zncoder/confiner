@@ -113,14 +113,14 @@ async function toStay(tab, host, isNew) {
         // case (b)
         console.log(`tab:${tab.id} case b`)
         return true
-      }         
+      }
     } catch (e) {
     }
     // case (i)
     console.log(`tab:${tab.id} case i`)
     return false
   }
-  
+
   if (tab.cookieStoreId !== "firefox-default") {
     // case (e)
     console.log(`tab:${tab.id} case e`)
@@ -198,25 +198,26 @@ function randName() {
   return Math.random().toString(36).substring(2, 10) + "·~"
 }
 
-async function toggleEphemeralContainer() {
-  let tabs = await browser.tabs.query({active: true, currentWindow: true})
-  let tab = tabs[0]
-  let csid = tab.cookieStoreId
-  if (csid === "firefox-default") {
-    return
-  }
+function isConfined(csid) {
+	return state.siteContainers.has(csid)
+}
 
-  let toRand = state.siteContainers.has(csid)
-  let name = toRand ? randName() : parseHost(tab.url)+"·"
-  let color = toRand ? randColor() : config.siteColor
-  let icon = toRand ? config.ephemeralIcon : config.siteIcon
-  if (toRand) {
-    state.siteContainers.delete(csid)
-  } else {
-    state.siteContainers.set(csid, name)
-  }
-  console.log(`toggle ${csid} to ${name}`)
-  return browser.contextualIdentities.update(csid, {name: name, color: color, icon: icon})
+function toEphemeral(csid) {
+  let name = randName()
+  let color = randColor()
+  let icon = config.ephemeralIcon
+  console.log(`convert ${csid} to ${name}`)
+  state.siteContainers.delete(csid)
+	let arg = {name: name, color: color, icon: icon}
+  return browser.contextualIdentities.update(csid, arg)
+}
+
+function toConfined(csid, name) {
+	name += "·"
+  console.log(`convert ${csid} to ${name}`)
+  state.siteContainers.set(csid, name)
+	let arg = {name: name, color: config.siteColor, icon: config.siteIcon}
+  return browser.contextualIdentities.update(csid, arg)
 }
 
 async function gcEphemeralContainers() {
@@ -250,13 +251,11 @@ async function gcEphemeralContainers() {
 async function init() {
   await initSiteContainers()
 
-  browser.browserAction.onClicked.addListener(toggleEphemeralContainer)
-  
   browser.tabs.onCreated.addListener(tab => addTab(tab.id))
   // extension is not executed on all tabs, e.g. addons.mozilla.org.
   // need to clean these tab ids from newTabs
   browser.tabs.onRemoved.addListener(removeTab)
-  
+
   browser.webRequest.onBeforeRequest.addListener(
     handleRequest,
     {urls: ["<all_urls>"], types: ["main_frame"]},

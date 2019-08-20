@@ -1,0 +1,25 @@
+body {
+		font-family: sans-serif;
+}
+
+.bigger {
+		font-size: 1.4em;
+}
+
+#action_btn {
+		align-items: "center";
+		width: 100%;
+		border: 0px;
+		border-radius: 6px;
+		margin: 0 auto;
+		background-color: lightskyblue;
+}
+
+#confiner_reduce {
+		border: 0px;
+		background-color: transparent;
+}
+
+#note_sec {
+		font-size: 0.8em;
+}
