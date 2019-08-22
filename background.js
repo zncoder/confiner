@@ -195,7 +195,8 @@ function removeTab(id) {
 }
 
 function randName() {
-  return Math.random().toString(36).substring(2, 10) + "·~"
+  // return Math.random().toString(36).substring(2, 10) + "·~"
+	return "e·~"
 }
 
 function isConfined(csid) {
