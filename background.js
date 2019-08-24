@@ -8,6 +8,7 @@ const state = {
   siteContainers: new Map(),           // csid -> name
   // unused containers stay for one gc cycle
   unusedContainers: new Set(),         // csid of unused ephemeral containers
+	nextIndex: 0,
 }
 
 function isFreeHost(host) {
@@ -157,7 +158,7 @@ function isRedirUrl(url) {
 }
 
 function randColor() {
-  let i = Math.floor(Math.random()*config.randColors.length)
+	let i = state.nextIndex % config.randColors.length;
   return config.randColors[i]
 }
 
@@ -180,7 +181,7 @@ async function getOrCreateContainer(host) {
 }
 
 async function newContainer(name) {
-  let isRand = name.endsWith("·~")
+  let isRand = name.endsWith("~")
   let ident = await browser.contextualIdentities.create({
     name: name,
     color: isRand ? randColor() : config.siteColor,
@@ -210,8 +211,10 @@ function removeTab(id) {
 }
 
 function randName() {
-  // return Math.random().toString(36).substring(2, 10) + "·~"
-	return "e·~"
+  // return Math.random().toString(36).substring(2, 10) + "~"
+	let i = state.nextIndex
+	state.nextIndex = (state.nextIndex + 1) % config.maxIndex
+	return "e"+i.toString(36)+"~"
 }
 
 function isConfined(csid) {
@@ -240,7 +243,7 @@ async function gcEphemeralContainers() {
   let unused = new Set()
   let all = await browser.contextualIdentities.query({})
   for (let x of all) {
-    if (x.name.endsWith("·~")) {
+    if (x.name.endsWith("~")) {
       unused.add(x.cookieStoreId)
     }
   }
