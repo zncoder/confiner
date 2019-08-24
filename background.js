@@ -31,7 +31,7 @@ async function handleRequest(arg) {
   state.newTabs.delete(tab.id)
   let host = parseHost(arg.url)
 
-  if (await toStay(tab, host, isNew)) {
+  if (await toStay(tab, host, isNew, isRedirUrl(arg.url))) {
     return {}
   }
 
@@ -62,7 +62,7 @@ async function handleRequest(arg) {
   return {}
 }
 
-async function toStay(tab, host, isNew) {
+async function toStay(tab, host, isNew, isRedir) {
   // rules,
   // - new tab opened by another tab
   //    - (a) cookieStoreId is default: stay (user open tab in default)
@@ -70,6 +70,7 @@ async function toStay(tab, host, isNew) {
   //        - same as opener's cookieStoreId (e.g. middle click or link opens in new tab)
   //            - (b) same host: stay
   //            - (i) different host: use host identity
+	//            - (j) redir: use host identity
   //        - (c) different cookieStoreId: stay (user open tab in this container)
   // - new tab not opened by another tab
   //    - (d) cookieStoreId is default: use host identity (new tab)
@@ -78,7 +79,7 @@ async function toStay(tab, host, isNew) {
   // - (g) old tab not in default: stay
   // - (h) free host: stay
 
-  if (isFreeHost(host)) {
+  if (!isRedir && isFreeHost(host)) {
     // case (h)
     console.log(`tab:${tab.id} case h`)
     return true
@@ -116,6 +117,10 @@ async function toStay(tab, host, isNew) {
       }
     } catch (e) {
     }
+		if (isRedir) {
+			console.log(`tab:${tab.id} case j`)
+			return false
+		}
     // case (i)
     console.log(`tab:${tab.id} case i`)
     return false
@@ -139,6 +144,16 @@ function parseHost(url) {
 
 function matchHost(a, b) {
   return a === b || a.endsWith("."+b) || b.endsWith("."+a)
+}
+
+function isRedirUrl(url) {
+	let s = url.replace(config.protocolRe, "").toLowerCase()
+	for (let x of config.redirPrefixes) {
+		if (s.startsWith(x)) {
+			return true
+		}
+	}
+	return false
 }
 
 function randColor() {
