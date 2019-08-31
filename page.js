@@ -42,6 +42,9 @@ function enableConfined(bg, csid, url) {
 	sel("#body_sec").style.display = "block"
 	sel("#confined_sec").style.display = "block"
 	let name = bg.parseHost(url)
+	if (name.startsWith("www.")) {
+		name = name.substring(4)
+	}
 	let cfn = sel("#confined_name")
 	cfn.value = name
 
