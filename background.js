@@ -8,16 +8,7 @@ const state = {
   siteContainers: new Map(),           // csid -> name
   // unused containers stay for one gc cycle
   unusedContainers: new Set(),         // csid of unused ephemeral containers
-	nextIndex: 0,
-}
-
-function isFreeHost(host) {
-  for (let x of config.freeHosts) {
-    if (x === host) {
-      return true
-    }
-  }
-  return false
+  nextIndex: 0,
 }
 
 async function handleRequest(arg) {
@@ -71,7 +62,7 @@ async function toStay(tab, host, isNew, isRedir) {
   //        - same as opener's cookieStoreId (e.g. middle click or link opens in new tab)
   //            - (b) same host: stay
   //            - (i) different host: use host identity
-	//            - (j) redir: use host identity
+  //            - (j) redir: use host identity
   //        - (c) different cookieStoreId: stay (user open tab in this container)
   // - new tab not opened by another tab
   //    - (d) cookieStoreId is default: use host identity (new tab)
@@ -80,7 +71,7 @@ async function toStay(tab, host, isNew, isRedir) {
   // - (g) old tab not in default: stay
   // - (h) free host: stay
 
-  if (!isRedir && isFreeHost(host)) {
+  if (!isRedir) {
     // case (h)
     console.log(`tab:${tab.id} case h`)
     return true
@@ -118,10 +109,10 @@ async function toStay(tab, host, isNew, isRedir) {
       }
     } catch (e) {
     }
-		if (isRedir) {
-			console.log(`tab:${tab.id} case j`)
-			return false
-		}
+    if (isRedir) {
+      console.log(`tab:${tab.id} case j`)
+      return false
+    }
     // case (i)
     console.log(`tab:${tab.id} case i`)
     return false
@@ -148,17 +139,17 @@ function matchHost(a, b) {
 }
 
 function isRedirUrl(url) {
-	let s = url.replace(config.protocolRe, "").toLowerCase()
-	for (let x of config.redirPrefixes) {
-		if (s.startsWith(x)) {
-			return true
-		}
-	}
-	return false
+  let s = url.replace(config.protocolRe, "").toLowerCase()
+  for (let x of config.redirPrefixes) {
+    if (s.startsWith(x)) {
+      return true
+    }
+  }
+  return false
 }
 
 function randColor() {
-	let i = state.nextIndex % config.randColors.length;
+  let i = state.nextIndex % config.randColors.length;
   return config.randColors[i]
 }
 
@@ -212,13 +203,13 @@ function removeTab(id) {
 
 function randName() {
   // return Math.random().toString(36).substring(2, 10) + "~"
-	let i = state.nextIndex
-	state.nextIndex = (state.nextIndex + 1) % config.maxIndex
-	return "e"+i.toString(36)+"~"
+  let i = state.nextIndex
+  state.nextIndex = (state.nextIndex + 1) % config.maxIndex
+  return "e"+i.toString(36)+"~"
 }
 
 function isConfined(csid) {
-	return state.siteContainers.has(csid)
+  return state.siteContainers.has(csid)
 }
 
 function toEphemeral(csid) {
@@ -227,15 +218,15 @@ function toEphemeral(csid) {
   let icon = config.ephemeralIcon
   console.log(`convert ${csid} to ${name}`)
   state.siteContainers.delete(csid)
-	let arg = {name: name, color: color, icon: icon}
+  let arg = {name: name, color: color, icon: icon}
   return browser.contextualIdentities.update(csid, arg)
 }
 
 function toConfined(csid, name) {
-	name += "·"
+  name += "·"
   console.log(`convert ${csid} to ${name}`)
   state.siteContainers.set(csid, name)
-	let arg = {name: name, color: config.siteColor, icon: config.siteIcon}
+  let arg = {name: name, color: config.siteColor, icon: config.siteIcon}
   return browser.contextualIdentities.update(csid, arg)
 }
 

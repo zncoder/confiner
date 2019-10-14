@@ -1,10 +1,4 @@
 const config = {
-	freeHosts: [
-		"google.com",
-		"www.google.com",
-		"accounts.google.com",
-		"duckduckgo.com"
-	],
 	redirPrefixes: [
 		"www.google.com/url?"
 	],
@@ -19,4 +13,3 @@ const config = {
 	maxIndex: 36*36-1,
 	disabled: false,
 }
-
