@@ -2,7 +2,7 @@
 	"manifest_version": 2,
 	"name": "Ephemeral or Confined Container",
 	"description": "Confine every site to either an ephemeral container or a site specific container",
-	"version": "1.7.0",
+	"version": "1.7.1",
 	"icons": {
 		"48": "icons/48.png"
 	},
@@ -17,7 +17,6 @@
 	],
 	"background": {
 		"scripts": [
-			"config.js",
 			"background.js"
 		]
 	},

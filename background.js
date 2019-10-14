@@ -3,6 +3,22 @@
 // - sites that are free stay in the current container
 // - open url in a tab with the contextualIdentities
 
+const config = {
+	redirParsers: [
+		googleRedir
+	],
+	protocolRe: new RegExp("^https?://"),
+	
+	randColors: ["turquoise", "green", "yellow", "orange", "red", "pink", "purple"],
+	ephemeralIcon: "chill",
+	siteIcon: "fingerprint",
+	siteColor: "blue",
+
+	gcInterval: 3600*1000, 				// keep unused ephemeral containers for 1h in case closed tab is undone
+	maxIndex: 36*36-1,
+	disabled: false,
+}
+
 const state = {
   newTabs: new Set(),
   siteContainers: new Map(),           // csid -> name
@@ -21,9 +37,9 @@ async function handleRequest(arg) {
   let isNew = state.newTabs.has(tab.id)
   //console.log(`tab:${tab.id} csid:${tab.cookieStoreId} ${isNew ? "new" : ""} url:${tab.url} arg:${arg.url}`)
   state.newTabs.delete(tab.id)
-  let host = parseHost(arg.url)
+  let [host, isRedir] = parseRedirHost(arg.url)
 
-  if (await toStay(tab, host, isNew, isRedirUrl(arg.url))) {
+  if (await toStay(tab, host, isNew, isRedir)) {
     return {}
   }
 
@@ -67,15 +83,8 @@ async function toStay(tab, host, isNew, isRedir) {
   // - new tab not opened by another tab
   //    - (d) cookieStoreId is default: use host identity (new tab)
   //    - (e) not default: stay (link in page)
-  // - (f) old tab in default: use host identity (free host)
+  // - (f) old tab in default: use host identity
   // - (g) old tab not in default: stay
-  // - (h) free host: stay
-
-  if (!isRedir) {
-    // case (h)
-    console.log(`tab:${tab.id} case h`)
-    return true
-  }
 
   if (!isNew) {
     if (tab.cookieStoreId === "firefox-default") {
@@ -131,21 +140,32 @@ async function toStay(tab, host, isNew, isRedir) {
 function parseHost(url) {
   let a = document.createElement("a")
   a.href = url
-  return a.host
+  return a.hostname
+}
+
+function parseRedirHost(url) {
+  let a = document.createElement("a")
+  a.href = url
+  for (let fn of config.redirParsers) {
+    let h = fn(a)
+    if (h) {
+      return [h, true]
+    }
+  }
+  return [a.host, false]
+}
+
+function googleRedir(a) {
+  if (a.protocol !== "https:" || a.hostname !== "www.google.com" ||
+      a.pathname !== "/url" || !a.search.startsWith("?q=")) {
+    return undefined
+  }
+  let url = decodeURIComponent(a.search.substring(3))
+  return parseHost(url)
 }
 
 function matchHost(a, b) {
   return a === b || a.endsWith("."+b) || b.endsWith("."+a)
-}
-
-function isRedirUrl(url) {
-  let s = url.replace(config.protocolRe, "").toLowerCase()
-  for (let x of config.redirPrefixes) {
-    if (s.startsWith(x)) {
-      return true
-    }
-  }
-  return false
 }
 
 function randColor() {
