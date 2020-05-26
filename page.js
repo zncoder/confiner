@@ -31,7 +31,7 @@ function enableEphemeral(bg, csid) {
 	sel("#body_sec").style.display = "block"
 	sel("#confined_sec").style.display = "none"
 	let btn = sel("#action_btn")
-	btn.value = "To ephemeral container"
+	btn.value = "Switch to ephemeral container"
 	btn.addEventListener("click", () => {
 		bg.toEphemeral(csid)
 		window.close()
@@ -49,7 +49,7 @@ function enableConfined(bg, csid, url) {
 	cfn.value = name
 
 	let btn = sel("#action_btn")
-	btn.value = "To confined container"
+	btn.value = "Switch to confined container"
 	btn.addEventListener("click", () => {
 		bg.toConfined(csid, cfn.value)
 		window.close()

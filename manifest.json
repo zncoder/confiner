@@ -2,7 +2,7 @@
 	"manifest_version": 2,
 	"name": "Ephemeral or Confined Container",
 	"description": "Confine every site to either an ephemeral container or a site specific container",
-	"version": "1.7.1",
+	"version": "1.8.0",
 	"icons": {
 		"48": "icons/48.png"
 	},
@@ -12,6 +12,7 @@
 		"contextualIdentities",
 		"storage",
 		"tabs",
+		"contextMenus",
 		"webRequestBlocking",
 		"webRequest"
 	],

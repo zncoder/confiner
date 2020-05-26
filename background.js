@@ -1,18 +1,16 @@
-// capture requests with onBeforeRequest listener
-// - create or get contextualIdentities for the site
-// - sites that are free stay in the current container
-// - open url in a tab with the contextualIdentities
+// Confiner put a new tab to a container, ephemeral or confined.
+// If the url matches a confined container, it is opened in the confined container;
+// otherwise it is opened in an ephemeral container.
+// A popup stays in the container it originates from, so that the login redirection works.
+// All tabs are in containers.
+// Unused ephemeral containers are deleted after 1h.
 
 const config = {
-	redirParsers: [
-		googleRedir
-	],
-	protocolRe: new RegExp("^https?://"),
-	
 	randColors: ["turquoise", "green", "yellow", "orange", "red", "pink", "purple"],
 	ephemeralIcon: "chill",
 	siteIcon: "fingerprint",
 	siteColor: "blue",
+	defaultContainer: "firefox-default",
 
 	gcInterval: 3600*1000, 				// keep unused ephemeral containers for 1h in case closed tab is undone
 	maxIndex: 36*36-1,
@@ -20,11 +18,10 @@ const config = {
 }
 
 const state = {
-  newTabs: new Set(),
   siteContainers: new Map(),           // csid -> name
   // unused containers stay for one gc cycle
   unusedContainers: new Set(),         // csid of unused ephemeral containers
-  nextIndex: 0,
+	nextIndex: 0,
 }
 
 async function handleRequest(arg) {
@@ -33,135 +30,35 @@ async function handleRequest(arg) {
   }
 
   let tab = await browser.tabs.get(arg.tabId)
-  // possibly change container for new tab only and at most once
-  let isNew = state.newTabs.has(tab.id)
-  //console.log(`tab:${tab.id} csid:${tab.cookieStoreId} ${isNew ? "new" : ""} url:${tab.url} arg:${arg.url}`)
-  state.newTabs.delete(tab.id)
-  let [host, isRedir] = parseRedirHost(arg.url)
+  //console.log(`tab:${tab.id} csid:${tab.cookieStoreId} url:${tab.url} arg:${arg.url}`)
 
-  if (await toStay(tab, host, isNew, isRedir)) {
-    return {}
-  }
+	// if the tab is already in a container, do nothing.
+	if (tab.cookieStoreId !== config.defaultContainer) {
+		return {}
+	}
 
-  // get or create container
   try {
+		let host = parseHost(arg.url)
     let csid = await getOrCreateContainer(host)
-    if (tab.cookieStoreId !== csid) {
-      // await so that tab is removed only if new tab is created successfully.
-      // in case container is disabled
-      let index = tab.index
-      if (!isNew) {
-        index++
-      }
-      await browser.tabs.create({
-        url: arg.url,
-        cookieStoreId: csid,
-        openerTabId: tab.id,
-        index: index,
-        active: true})
-      if (isNew) {
-        browser.tabs.remove(tab.id)
-      }
-      return {cancel: true}
-    }
-  } catch (e) {
+    await browser.tabs.create({
+      url: arg.url,
+      cookieStoreId: csid,
+      openerTabId: tab.id,
+      index: tab.index + 1,
+      active: true})
+		// close the old tab
+		await browser.tabs.remove(tab.id)
+		return {cancel: true}
+	} catch (e) {
     console.log(`handlerequest err:${e}`)
   }
   return {}
 }
 
-async function toStay(tab, host, isNew, isRedir) {
-  // rules,
-  // - new tab opened by another tab
-  //    - (a) cookieStoreId is default: stay (user open tab in default)
-  //    - cookieStoreId is not default
-  //        - same as opener's cookieStoreId (e.g. middle click or link opens in new tab)
-  //            - (b) same host: stay
-  //            - (i) different host: use host identity
-  //            - (j) redir: use host identity
-  //        - (c) different cookieStoreId: stay (user open tab in this container)
-  // - new tab not opened by another tab
-  //    - (d) cookieStoreId is default: use host identity (new tab)
-  //    - (e) not default: stay (link in page)
-  // - (f) old tab in default: use host identity
-  // - (g) old tab not in default: stay
-
-  if (!isNew) {
-    if (tab.cookieStoreId === "firefox-default") {
-      // case (f)
-      console.log(`tab:${tab.id} case f`)
-      return false
-    } else {
-      // case (g)
-      console.log(`tab:${tab.id} case g`)
-      return true
-    }
-  }
-
-  if (tab.openerTabId) {
-    if (tab.cookieStoreId === "firefox-default") {
-      // case (a)
-      console.log(`tab:${tab.id} case a`)
-      return true
-    }
-    try {
-      let opener = await browser.tabs.get(tab.openerTabId)
-      if (opener.cookieStoreId !== tab.cookieStoreId) {
-        // case (c)
-        console.log(`tab:${tab.id} case c`)
-        return true
-      }
-      if (parseHost(opener.url) === host) {
-        // case (b)
-        console.log(`tab:${tab.id} case b`)
-        return true
-      }
-    } catch (e) {
-    }
-    if (isRedir) {
-      console.log(`tab:${tab.id} case j`)
-      return false
-    }
-    // case (i)
-    console.log(`tab:${tab.id} case i`)
-    return false
-  }
-
-  if (tab.cookieStoreId !== "firefox-default") {
-    // case (e)
-    console.log(`tab:${tab.id} case e`)
-    return true
-  }
-  // case (d)
-  console.log(`tab:${tab.id} case d`)
-  return false
-}
-
 function parseHost(url) {
   let a = document.createElement("a")
   a.href = url
-  return a.hostname
-}
-
-function parseRedirHost(url) {
-  let a = document.createElement("a")
-  a.href = url
-  for (let fn of config.redirParsers) {
-    let h = fn(a)
-    if (h) {
-      return [h, true]
-    }
-  }
-  return [a.host, false]
-}
-
-function googleRedir(a) {
-  if (a.protocol !== "https:" || a.hostname !== "www.google.com" ||
-      a.pathname !== "/url" || !a.search.startsWith("?q=")) {
-    return undefined
-  }
-  let url = decodeURIComponent(a.search.substring(3))
-  return parseHost(url)
+  return a.host
 }
 
 function matchHost(a, b) {
@@ -209,16 +106,6 @@ async function initSiteContainers() {
     }
   }
   state.siteContainers = m
-}
-
-function addTab(id) {
-  //console.log(`add newtab:${id}`)
-  state.newTabs.add(id)
-}
-
-function removeTab(id) {
-  //console.log(`remove tab:${id}`)
-  state.newTabs.delete(id)
 }
 
 function randName() {
@@ -278,18 +165,29 @@ async function gcEphemeralContainers() {
   state.unusedContainers = unused
 }
 
+function handleMenu(info, tab) {
+	switch (info.menuItemId) {
+	case "open-link":
+		browser.tabs.create({
+      url: info.linkUrl,
+      cookieStoreId: config.defaultContainer,
+      openerTabId: tab.id,
+      index: tab.index + 1,
+      active: true})
+		break
+	}
+}
+
 async function init() {
   await initSiteContainers()
-
-  browser.tabs.onCreated.addListener(tab => addTab(tab.id))
-  // extension is not executed on all tabs, e.g. addons.mozilla.org.
-  // need to clean these tab ids from newTabs
-  browser.tabs.onRemoved.addListener(removeTab)
 
   browser.webRequest.onBeforeRequest.addListener(
     handleRequest,
     {urls: ["<all_urls>"], types: ["main_frame"]},
     ["blocking"])
+
+	browser.contextMenus.create({id: "open-link", title: "Open Link in New Tab", contexts: ["link"]})
+	browser.contextMenus.onClicked.addListener(handleMenu)
 
   setInterval(gcEphemeralContainers, config.gcInterval)
 }
