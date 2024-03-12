@@ -3,10 +3,10 @@ async function initPage() {
 	let csid = tabs[0].cookieStoreId
 	let url = tabs[0].url
 	console.log(`page for csid:${csid} url:${url}`)
-  if (csid === "firefox-default") {
-    hideBody()
+	if (csid === "firefox-default") {
+		hideBody()
 		return
-  }
+	}
 
 	let bg = await browser.runtime.getBackgroundPage()
 
