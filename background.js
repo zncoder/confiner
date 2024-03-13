@@ -20,7 +20,6 @@ const config = {
 const state = {
 	hostSuffixContainers: {}, // hostSuffix: {csid:, name:}
 	urlPrefixContainers: {}, // urlPrefix: {csid:, name:}
-	siteContainers: new Map(),           // csid -> {name:, pattern:}, TODO: remove
 	// unused containers stay for one gc cycle
 	unusedContainers: new Set(),         // csid of unused ephemeral containers
 	nextIndex: 0,
@@ -116,11 +115,9 @@ async function initSiteContainers() {
 	await loadSaved()
 
 	let changed = false
-	let m = new Map()
 	let all = await browser.contextualIdentities.query({})
 	for (let x of all) {
 		if (x.name.endsWith("·")) {
-			m.set(x.cookieStoreId, x.name)
 			let hostSuffix = x.name.substring(0, x.name.length-1)
 			if (!state.hostSuffixContainers[hostSuffix]) {
 				state.hostSuffixContainers[hostSuffix] = {csid: x.cookieStoreId, name: x.name}
@@ -128,7 +125,6 @@ async function initSiteContainers() {
 			}
 		}
 	}
-	state.siteContainers = m
 
 	if (changed) {
 		await setSaved()
@@ -153,7 +149,7 @@ function isConfined(csid) {
 			return true
 		}
 	}
-	return state.siteContainers.has(csid)
+	return false
 }
 
 async function loadSaved() {
@@ -174,9 +170,6 @@ async function setSaved() {
 }
 
 async function toEphemeral(csid) {
-	let siteName = state.siteContainers.get(csid)
-	state.siteContainers.delete(csid)
-
 	let hostsToDel = []
 	for (const [k, v] of Object.entries(state.hostSuffixContainers)) {
 		if (v.csid === csid) {
@@ -212,7 +205,6 @@ async function toConfined(csid, origName) {
 	let arg = {name: name, color: config.siteColor, icon: config.siteIcon}
 	await browser.contextualIdentities.update(csid, arg)
 
-	state.siteContainers.set(csid, name)
 	state.hostSuffixContainers[origName] = {csid: csid, name: name}
 	await setSaved()
 }
