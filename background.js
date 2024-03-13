@@ -70,23 +70,30 @@ function matchHost(a, b) {
 	return a === b || a.endsWith("."+b) || b.endsWith("."+a)
 }
 
+function matchHostSuffix(prefix, host) {
+	if (prefix === host) {
+		return true
+	}
+	if (!prefix.startsWith('.')) {
+		prefix = '.' + prefix
+	}
+	return host.endsWith(prefix)
+}
+
 function randColor() {
 	let i = state.nextIndex % config.randColors.length;
 	return config.randColors[i]
 }
 
 async function getOrCreateContainer(host) {
-	let name = host+"·"
-	for (let x of state.siteContainers) {
-		if (matchHost(x[1], name)) {
-			if (name.length < x[1].length) {
-				// use shorter name
-				await browser.contextualIdentities.update(x[0], {name: name})
-			}
-			return x[0]
+	// named
+	for (const [k, v] of Object.entries(state.hostSuffixContainers)) {
+		if (matchHostSuffix(k, host)) {
+			return v.csid
 		}
 	}
 
+	// ephemeral
 	name = randName()
 	let csid = await newContainer(name)
 	console.log(`assign ${host} => ${name},${csid}`)
@@ -136,6 +143,16 @@ function randName() {
 }
 
 function isConfined(csid) {
+	for (const [k, v] of Object.entries(state.hostSuffixContainers)) {
+		if (v.csid === csid) {
+			return true
+		}
+	}
+	for (const [k, v] of Object.entries(state.urlPrefixContainers)) {
+		if (v.csid === csid) {
+			return true
+		}
+	}
 	return state.siteContainers.has(csid)
 }
 
