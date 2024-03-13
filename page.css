@@ -1,25 +1,34 @@
 body {
-		font-family: sans-serif;
+	font-family: sans-serif;
 }
 
 div {
-		margin: 2px;
+	margin: 2px;
 }
 
-#action_btn {
-		font-size: 1.2em;
-		border: 0px;
-		border-radius: 4px;
-		width: 100%;
-		background-color: lightskyblue;
+.action_btn {
+	font-size: 1.2em;
+	border: 0px;
+	border-radius: 4px;
+	width: 100%;
+	background-color: lightskyblue;
 }
 
 .btn {
-		font-size: 1.4em;
-		border: 0px;
-		background-color: transparent;
+	border: 0px;
+	background-color: transparent;
+}
+
+#pattern_sec {
+	border: 1px solid #eee;
+	margin: 4px;
 }
 
 #note_sec {
-		font-size: 0.8em;
+	border-top: 1px solid #eee;
+	font-size: 0.8em;
+}
+
+#pattern_btn {
+	color: black;
 }

@@ -39,7 +39,7 @@ async function handleRequest(arg) {
 	}
 
 	try {
-		let host = parseHost(arg.url)
+		let host = new URL(arg.url).host
 		let csid = await getOrCreateContainer(host)
 		await browser.tabs.create(
 			{
@@ -57,12 +57,6 @@ async function handleRequest(arg) {
 		console.log(`handlerequest err:${e}`)
 	}
 	return {}
-}
-
-function parseHost(url) {
-	let a = document.createElement("a")
-	a.href = url
-	return a.host
 }
 
 function matchHost(a, b) {

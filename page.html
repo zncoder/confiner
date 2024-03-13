@@ -3,19 +3,26 @@
 <html>
   <head>
     <meta charset="utf-8">
-		<link rel="stylesheet" type="text/css" href="page.css">
+	<link rel="stylesheet" type="text/css" href="page.css">
   </head>
 
-	<body>
-		<div id="body_sec">
-			<div><input type="button" id="action_btn"></div>
-			<div id="confined_sec">
-				<input type="button" id="confined_minus" value="✂" class="btn">
-				<input type="text" id="confined_name" readonly class="btn">
-			</div>
+  <body>
+	<div id="body_sec">
+	  <div>
+		<input type="button" class="action_btn" id="to_ephemeral_btn" value="switch to ephemeral container">
+		<input type="button" class="action_btn" id="to_confined_btn" value="switch to confined container">
+	  </div>
+	  <div id="confined_sec">
+		<input type="radio" id="host_btn" name="choice" checked><label for="host_btn">Host suffix</label><br>
+		<input type="radio" id="url_btn" name="choice"><label for="url_btn">URL prefix</label>
+		<div id='pattern_sec'>
+		  <input type="button" id="minus_btn" value="−" class="btn">
+		  <input type="text" id="pattern_btn" readonly disabled class="btn">
 		</div>
-		<div id="note_sec">Note: firefox may not update the addressbar</div>
-		
-		<script src="page.js"></script>
-	</body>
+	  </div>
+	</div>
+	<div id="note_sec">switch tab to update addressbar</div>
+
+	<script src="page.js"></script>
+  </body>
 </html>
