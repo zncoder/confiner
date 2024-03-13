@@ -12,13 +12,15 @@ const config = {
 	siteColor: "blue",
 	defaultContainer: "firefox-default",
 
-	gcInterval: 3600*1000, 				// keep unused ephemeral containers for 1h in case closed tab is undone
+	gcInterval: 3600*1000, // keep unused ephemeral containers for 1h in case closed tab is undone
 	maxIndex: 36*36-1,
 	disabled: false,
 }
 
 const state = {
-	siteContainers: new Map(),           // csid -> name
+	hostSuffixContainers: {}, // hostSuffix: {csid:, name:}
+	urlPrefixContainers: {}, // urlPrefix: {csid:, name:}
+	siteContainers: new Map(),           // csid -> {name:, pattern:}, TODO: remove
 	// unused containers stay for one gc cycle
 	unusedContainers: new Set(),         // csid of unused ephemeral containers
 	nextIndex: 0,
@@ -104,14 +106,26 @@ async function newContainer(name) {
 }
 
 async function initSiteContainers() {
+	await loadSaved()
+
+	let changed = false
 	let m = new Map()
 	let all = await browser.contextualIdentities.query({})
 	for (let x of all) {
 		if (x.name.endsWith("·")) {
 			m.set(x.cookieStoreId, x.name)
+			let hostSuffix = x.name.substring(0, x.name.length-1)
+			if (!state.hostSuffixContainers[hostSuffix]) {
+				state.hostSuffixContainers[hostSuffix] = {csid: x.cookieStoreId, name: x.name}
+				changed = true
+			}
 		}
 	}
 	state.siteContainers = m
+
+	if (changed) {
+		await setSaved()
+	}
 }
 
 function randName() {
@@ -125,22 +139,65 @@ function isConfined(csid) {
 	return state.siteContainers.has(csid)
 }
 
-function toEphemeral(csid) {
+async function loadSaved() {
+	let saved = await browser.storage.local.get(
+		['confinerHostSuffixContainers', 'confinerUrlPrefixContainers'])
+	if (saved.confinerHostSuffixContainers) {
+		state.hostSuffixContainers = saved.confinerHostSuffixContainers
+	}
+	if (saved.confinerUrlPrefixContainers) {
+		state.urlPrefixContainers = saved.confinerUrlPrefixContainers
+	}
+}
+
+async function setSaved() {
+	let confinerHostSuffixContainers = state.hostSuffixContainers
+	let confinerUrlPrefixContainers = state.urlPrefixContainers
+	await browser.storage.local.set({confinerHostSuffixContainers, confinerUrlPrefixContainers})
+}
+
+async function toEphemeral(csid) {
+	let siteName = state.siteContainers.get(csid)
+	state.siteContainers.delete(csid)
+
+	let hostsToDel = []
+	for (const [k, v] of Object.entries(state.hostSuffixContainers)) {
+		if (v.csid === csid) {
+			hostsToDel.push(k)
+		}
+	}
+	for (const k of hostsToDel) {
+		delete state.hostSuffixContainers[k]
+	}
+	let urlsToDel = []
+	for (const [k, v] of Object.entries(state.urlPrefixContainers)) {
+		if (v.csid === csid) {
+			urlsToDel.push(k)
+		}
+	}
+	for (const k of urlsToDel) {
+		delete state.urlsPrefixContainers[k]
+	}
+	if (hostsToDel.length > 0 || urlsToDel.length > 0) {
+		await setSaved()
+	}
+
 	let name = randName()
 	let color = randColor()
 	let icon = config.ephemeralIcon
-	console.log(`convert ${csid} to ${name}`)
-	state.siteContainers.delete(csid)
 	let arg = {name: name, color: color, icon: icon}
-	return browser.contextualIdentities.update(csid, arg)
+	await browser.contextualIdentities.update(csid, arg)
 }
 
-function toConfined(csid, name) {
-	name += "·"
+async function toConfined(csid, origName) {
+	name = origName + "·"
 	console.log(`convert ${csid} to ${name}`)
-	state.siteContainers.set(csid, name)
 	let arg = {name: name, color: config.siteColor, icon: config.siteIcon}
-	return browser.contextualIdentities.update(csid, arg)
+	await browser.contextualIdentities.update(csid, arg)
+
+	state.siteContainers.set(csid, name)
+	state.hostSuffixContainers[origName] = {csid: csid, name: name}
+	await setSaved()
 }
 
 async function gcEphemeralContainers() {
