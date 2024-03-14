@@ -51,6 +51,7 @@ async function onHostBtnClicked() {
 	let [tab] = await browser.tabs.query({active: true, currentWindow: true})
 	let url = new URL(tab.url)
 	sel('#pattern_btn').value = url.host
+	sel('#name_btn').style.display = 'none'
 }
 
 function onMinusBtnClicked(url) {
@@ -81,6 +82,7 @@ async function onUrlBtnClicked() {
 		path = path.substring(0, path.length-1)
 	}
 	sel('#pattern_btn').value = path
+	sel('#name_btn').style.display = 'block'
 	setNameBtnPlaceholder()
 }
 
