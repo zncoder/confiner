@@ -89,6 +89,8 @@ function setNameBtnPlaceholder() {
 	btn.placeholder = btn.getAttribute('data-text')
 }
 
+const nameRe = new RegExp('[a-z]{3,}')
+
 async function onConfinedBtnClicked() {
 	let [tab] = await browser.tabs.query({active: true, currentWindow: true})
 	let bg = await browser.runtime.getBackgroundPage()
@@ -96,7 +98,18 @@ async function onConfinedBtnClicked() {
 	if (sel('#host_btn').checked) {
 		bg.toConfined({hostSuffix: val, csid: tab.cookieStoreId})
 	} else {
-		bg.toConfined({urlPrefix: val, csid: tab.cookieStoreId})
+		let name = sel('#name_btn').value
+		if (!nameRe.test(name)) {
+			setNote('name must be [a-z]{3,}')
+			return
+		}
+		if (bg.nameInUse(name)) {
+			setNote(`${name} is in use`)
+			return
+		}
+		let u = new URL(tab.url)
+		let prefix = `${u.protocol}//${u.host}${val}`
+		bg.toConfined({urlPrefix: prefix, csid: tab.cookieStoreId, name: name})
 	}
 	window.close()
 }

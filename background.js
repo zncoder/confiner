@@ -6,10 +6,12 @@
 // Unused ephemeral containers are deleted after 1h.
 
 const config = {
-	randColors: ["turquoise", "green", "yellow", "orange", "red", "pink", "purple"],
+	randColors: ["green", "yellow", "orange", "red", "pink", "purple"],
 	ephemeralIcon: "chill",
 	siteIcon: "fingerprint",
 	siteColor: "blue",
+	urlIcon: "fence",
+	urlColor: "turquoise",
 	defaultContainer: "firefox-default",
 
 	gcInterval: 3600*1000, // keep unused ephemeral containers for 1h in case closed tab is undone
@@ -57,6 +59,16 @@ async function handleRequest(arg) {
 		console.log(`handlerequest err:${e}`)
 	}
 	return {}
+}
+
+function nameInUse(name) {
+	name = '·' + name
+	for (const [k, v] of Object.entries(state.urlPrefixContainers)) {
+		if (v.name === name) {
+			return true
+		}
+	}
+	return false
 }
 
 function matchHost(a, b) {
@@ -180,7 +192,7 @@ async function toEphemeral(csid) {
 		}
 	}
 	for (const k of urlsToDel) {
-		delete state.urlsPrefixContainers[k]
+		delete state.urlPrefixContainers[k]
 	}
 	if (hostsToDel.length > 0 || urlsToDel.length > 0) {
 		await setSaved()
@@ -196,13 +208,25 @@ async function toEphemeral(csid) {
 async function toConfined(arg) {
 	let csid = arg.csid
 	let hostSuffix = arg.hostSuffix
+	let urlPrefix = arg.urlPrefix
 	if (hostSuffix) {
-		name = hostSuffix + "·"
+		let name = hostSuffix + "·"
 		console.log(`convert ${csid} to ${name}`)
-		let arg = {name: name, color: config.siteColor, icon: config.siteIcon}
-		await browser.contextualIdentities.update(csid, arg)
+		await browser.contextualIdentities.update(
+			csid,
+			{name: name, color: config.siteColor, icon: config.siteIcon}
+		)
 
 		state.hostSuffixContainers[hostSuffix] = {csid: csid, name: name}
+	} else if (urlPrefix) {
+		let name = '·' + arg.name
+		console.log(`convert ${csid} to ${name}`)
+		await browser.contextualIdentities.update(
+			csid,
+			{name: name, color: config.urlColor, icon: config.urlIcon}
+		)
+
+		state.urlPrefixContainers[urlPrefix] = {csid: csid, name: name}
 	}
 	await setSaved()
 }
