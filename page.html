@@ -8,10 +8,6 @@
 
   <body>
 	<div id="body_sec">
-	  <div>
-		<input type="button" class="action_btn" id="to_ephemeral_btn" value="switch to ephemeral container">
-		<input type="button" class="action_btn" id="to_confined_btn" value="switch to confined container">
-	  </div>
 	  <div id="confined_sec">
 		<input type="radio" id="host_btn" name="choice" checked><label for="host_btn">Host suffix</label><br>
 		<input type="radio" id="url_btn" name="choice"><label for="url_btn">URL prefix</label>
@@ -24,6 +20,10 @@
 			<input type="text" id="name_btn" class="btn" data-text='name the container here'>
 		  </div>
 		</div>
+	  </div>
+	  <div>
+		<input type="button" class="action_btn" id="to_ephemeral_btn" value="switch to ephemeral container">
+		<input type="button" class="action_btn" id="to_confined_btn" value="switch to confined container">
 	  </div>
 	</div>
 	<div id="note_sec" data-text="switch tab to update addressbar"></div>

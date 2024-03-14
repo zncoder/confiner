@@ -9,9 +9,10 @@ div {
 .action_btn {
 	font-size: 1.2em;
 	border: 0px;
-	border-radius: 4px;
+	border-radius: 8px;
 	width: 100%;
 	background-color: lightskyblue;
+	padding: 4px;
 }
 
 .btn {
