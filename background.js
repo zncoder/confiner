@@ -106,7 +106,7 @@ async function getOrCreateContainer(url) {
 	// ephemeral
 	name = randName()
 	let csid = await newContainer(name)
-	console.log(`assign ${host} => ${name},${csid}`)
+	console.log(`assign ${u.host} => ${name},${csid}`)
 	return csid
 }
 
