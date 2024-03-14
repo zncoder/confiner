@@ -51,7 +51,7 @@ async function onHostBtnClicked() {
 	let [tab] = await browser.tabs.query({active: true, currentWindow: true})
 	let url = new URL(tab.url)
 	sel('#pattern_btn').value = url.host
-	sel('#name_btn').style.display = 'none'
+	sel('#name_sec').style.display = 'none'
 }
 
 function onMinusBtnClicked(url) {
@@ -82,6 +82,40 @@ async function onUrlBtnClicked() {
 		path = path.substring(0, path.length-1)
 	}
 	sel('#pattern_btn').value = path
+	sel('#name_sec').style.display = 'block'
+	if (!await initNameSelect()) {
+		onPlusBtnClicked()
+	}
+}
+
+async function initNameSelect() {
+	let bg = await browser.runtime.getBackgroundPage()
+	let names = bg.getUrlPrefixNames()
+	let sec = sel('#choose_name_sec')
+	if (names.length === 0) {
+		sec.setAttribute('data-sel', '0')
+		return false
+	}
+
+	sec.style.display = 'block'
+	sec.setAttribute('data-sel', '1')
+	sel('#name_btn').style.display = 'none'
+
+	let el = sel('#choose_name_sel')
+	for (const name of names) {
+		let opt = document.createElement('option')
+		opt.text = name
+		opt.value = name
+		el.appendChild(opt)
+	}
+	sel('#plus_btn').addEventListener('click', onPlusBtnClicked)
+	return true
+}
+
+function onPlusBtnClicked() {
+	let sec = sel('#choose_name_sec')
+	sec.style.display = 'none'
+	sec.setAttribute('data-sel', '0')
 	sel('#name_btn').style.display = 'block'
 	setNameBtnPlaceholder()
 }
@@ -100,13 +134,8 @@ async function onConfinedBtnClicked() {
 	if (sel('#host_btn').checked) {
 		bg.toConfined({hostSuffix: val, csid: tab.cookieStoreId})
 	} else {
-		let name = sel('#name_btn').value
-		if (!nameRe.test(name)) {
-			setNote('name must be [a-z]{3,}')
-			return
-		}
-		if (bg.nameInUse(name)) {
-			setNote(`${name} is in use`)
+		let name = await getNameSecValue()
+		if (!name) {
 			return
 		}
 		let u = new URL(tab.url)
@@ -114,6 +143,26 @@ async function onConfinedBtnClicked() {
 		bg.toConfined({urlPrefix: prefix, csid: tab.cookieStoreId, name: name})
 	}
 	window.close()
+}
+
+async function getNameSecValue() {
+	let sec = sel('#choose_name_sec')
+	if (sec.getAttribute('data-sel') === '1') {
+		let el = sel('#choose_name_sel')
+		return el.options[el.selectedIndex].value
+	} else {
+		let name = sel('#name_btn').value
+		if (!nameRe.test(name)) {
+			setNote('name must be [a-z]{3,}')
+			return undefined
+		}
+		let bg = await browser.runtime.getBackgroundPage()
+		if (bg.nameInUse(name)) {
+			setNote(`${name} is in use`)
+			return undefined
+		}
+		return name
+	}
 }
 
 async function enableConfined(bg, csid, url) {

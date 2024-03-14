@@ -13,10 +13,14 @@
 		<input type="radio" id="url_btn" name="choice"><label for="url_btn">URL prefix</label>
 		<div class="pattern_sec">
 		  <div class="input_row">
-		  <input type="button" id="minus_btn" value="−" class="btn">
+		  <input type="button" id="minus_btn" value="－" class="btn">
 		  <input type="text" id="pattern_btn" readonly disabled class="btn">
 		  </div>
-		  <div class="input_row">
+		  <div class="input_row" id="name_sec">
+			<span id="choose_name_sec" data-sel="0">
+			  <input type="button" id="plus_btn" value="＋" class="btn">
+			  <select id="choose_name_sel" class="btn"></select>
+			</span>
 			<input type="text" id="name_btn" class="btn" data-text='name the container here'>
 		  </div>
 		</div>

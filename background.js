@@ -70,6 +70,14 @@ function nameInUse(name) {
 	return false
 }
 
+function getUrlPrefixNames() {
+	let names = []
+	for (const [k, v] of Object.entries(state.urlPrefixContainers)) {
+		names.push(v.name.substring(1))
+	}
+	return names
+}
+
 function matchHost(a, b) {
 	return a === b || a.endsWith("."+b) || b.endsWith("."+a)
 }
