@@ -1,7 +1,8 @@
 async function initPage() {
 	let [tab] = await browser.tabs.query({active: true, currentWindow: true})
 	let csid = tab.cookieStoreId
-	let url = tab.url
+	let u = new URL(tab.url)
+	let url = `${u.protocol}//${u.host}${u.pathname}`
 	console.log(`page for csid:${csid} url:${url}`)
 	if (csid === "firefox-default") {
 		hideBody()
@@ -10,10 +11,10 @@ async function initPage() {
 
 	let bg = await browser.runtime.getBackgroundPage()
 
-	if (bg.isConfined(csid)) {
-		enableEphemeral(bg, csid)
+	if (bg.isConfined(csid, url)) {
+		enableEphemeral(bg, csid, url)
 	} else {
-		enableConfined(bg, csid, url)
+		enableConfined(url)
 	}
 
 	setNote()
@@ -36,12 +37,12 @@ function hideBody() {
 	sel("#note_sec").innerText = "Cannot toggle default container"
 }
 
-function enableEphemeral(bg, csid) {
+function enableEphemeral(bg, csid, url) {
 	sel('#to_confined_btn').style.display = 'none'
 	sel('#to_ephemeral_btn').style.display = 'block'
 	let btn = sel("#to_ephemeral_btn")
 	btn.addEventListener("click", () => {
-		bg.toEphemeral(csid)
+		bg.toEphemeral(csid, url)
 		window.close()
 	})
 	sel('#confined_sec').style.display = 'none'
@@ -71,7 +72,6 @@ function onMinusBtnClicked(url) {
 			pat.value = pat.value.substring(0, i)
 		}
 	}
-	console.log('pat.value', pat.value)
 }
 
 async function onUrlBtnClicked() {
@@ -92,7 +92,7 @@ async function initNameSelect() {
 	let bg = await browser.runtime.getBackgroundPage()
 	let names = bg.getUrlPrefixNames()
 	let sec = sel('#choose_name_sec')
-	if (names.length === 0) {
+	if (Object.keys(names).length === 0) {
 		sec.setAttribute('data-sel', '0')
 		return false
 	}
@@ -102,10 +102,10 @@ async function initNameSelect() {
 	sel('#name_btn').style.display = 'none'
 
 	let el = sel('#choose_name_sel')
-	for (const name of names) {
+	for (const [name, csid] of Object.entries(names)) {
 		let opt = document.createElement('option')
 		opt.text = name
-		opt.value = name
+		opt.value = csid
 		el.appendChild(opt)
 	}
 	sel('#plus_btn').addEventListener('click', onPlusBtnClicked)
@@ -134,13 +134,16 @@ async function onConfinedBtnClicked() {
 	if (sel('#host_btn').checked) {
 		bg.toConfined({hostSuffix: val, csid: tab.cookieStoreId})
 	} else {
-		let name = await getNameSecValue()
+		let [name, csid] = await getNameSecValue()
 		if (!name) {
 			return
 		}
 		let u = new URL(tab.url)
 		let prefix = `${u.protocol}//${u.host}${val}`
-		bg.toConfined({urlPrefix: prefix, csid: tab.cookieStoreId, name: name})
+		if (!csid) {
+			csid = tab.cookieStoreId
+		}
+		bg.toConfined({urlPrefix: prefix, csid: csid, name: name})
 	}
 	window.close()
 }
@@ -149,23 +152,24 @@ async function getNameSecValue() {
 	let sec = sel('#choose_name_sec')
 	if (sec.getAttribute('data-sel') === '1') {
 		let el = sel('#choose_name_sel')
-		return el.options[el.selectedIndex].value
+		let opt = el.options[el.selectedIndex]
+		return [opt.text, opt.value]
 	} else {
 		let name = sel('#name_btn').value
 		if (!nameRe.test(name)) {
-			setNote('name must be [a-z]{3,}')
-			return undefined
+			setNote('name must be 3+ a-z chars')
+			return [undefined, undefined]
 		}
 		let bg = await browser.runtime.getBackgroundPage()
 		if (bg.nameInUse(name)) {
 			setNote(`${name} is in use`)
-			return undefined
+			return [undefined, undefined]
 		}
-		return name
+		return [name, undefined]
 	}
 }
 
-async function enableConfined(bg, csid, url) {
+async function enableConfined(url) {
 	sel('#to_confined_btn').style.display = 'block'
 	sel('#to_ephemeral_btn').style.display = 'none'
 	sel("#to_confined_btn").addEventListener("click", onConfinedBtnClicked)

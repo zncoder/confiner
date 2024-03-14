@@ -70,10 +70,24 @@ function nameInUse(name) {
 	return false
 }
 
-function getUrlPrefixNames() {
-	let names = []
+function csidInUse(csid) {
+	for (const [k, v] of Object.entries(state.hostSuffixContainers)) {
+		if (v.csid === csid) {
+			return true
+		}
+	}
 	for (const [k, v] of Object.entries(state.urlPrefixContainers)) {
-		names.push(v.name.substring(1))
+		if (v.csid === csid) {
+			return true
+		}
+	}
+	return false
+}
+
+function getUrlPrefixNames() {
+	let names = {}
+	for (const [k, v] of Object.entries(state.urlPrefixContainers)) {
+		names[v.name.substring(1)] = v.csid
 	}
 	return names
 }
@@ -92,6 +106,10 @@ function matchHostSuffix(suffix, host) {
 	return host.endsWith(suffix)
 }
 
+function matchUrlPrefix(prefix, url) {
+	return prefix === url || url.startsWith(prefix+'/')
+}
+
 function randColor() {
 	let i = state.nextIndex % config.randColors.length;
 	return config.randColors[i]
@@ -99,6 +117,7 @@ function randColor() {
 
 async function getOrCreateContainer(url) {
 	let u = new URL(url)
+	url = `${u.protocol}//${u.host}${u.pathname}`
 	// named
 	for (const [k, v] of Object.entries(state.hostSuffixContainers)) {
 		if (matchHostSuffix(k, u.host)) {
@@ -106,7 +125,7 @@ async function getOrCreateContainer(url) {
 		}
 	}
 	for (const [k, v] of Object.entries(state.urlPrefixContainers)) {
-		if (k === url || url.startsWith(k+'/')) {
+		if (matchUrlPrefix(k, url)) {
 			return v.csid
 		}
 	}
@@ -157,14 +176,15 @@ function randName() {
 	return "e"+i.toString(36)+"~"
 }
 
-function isConfined(csid) {
+function isConfined(csid, url) {
 	for (const [k, v] of Object.entries(state.hostSuffixContainers)) {
 		if (v.csid === csid) {
 			return true
 		}
 	}
+	// check url instead of csid because multiple urls may share the same container
 	for (const [k, v] of Object.entries(state.urlPrefixContainers)) {
-		if (v.csid === csid) {
+		if (matchUrlPrefix(k, url)) {
 			return true
 		}
 	}
@@ -188,7 +208,10 @@ async function setSaved() {
 	await browser.storage.local.set({confinerHostSuffixContainers, confinerUrlPrefixContainers})
 }
 
-async function toEphemeral(csid) {
+// when multiple pages share the same container because of urlPrefix,
+// converting a page to ephemeral won't remove the page from
+// the container until the page is opened in a new tab.
+async function toEphemeral(csid, url) {
 	let hostsToDel = []
 	for (const [k, v] of Object.entries(state.hostSuffixContainers)) {
 		if (v.csid === csid) {
@@ -198,9 +221,11 @@ async function toEphemeral(csid) {
 	for (const k of hostsToDel) {
 		delete state.hostSuffixContainers[k]
 	}
+	let u = new URL(url)
+	url = `${u.protocol}//${u.host}${u.pathname}`
 	let urlsToDel = []
 	for (const [k, v] of Object.entries(state.urlPrefixContainers)) {
-		if (v.csid === csid) {
+		if (matchUrlPrefix(k, url)) {
 			urlsToDel.push(k)
 		}
 	}
@@ -211,11 +236,13 @@ async function toEphemeral(csid) {
 		await setSaved()
 	}
 
-	let name = randName()
-	let color = randColor()
-	let icon = config.ephemeralIcon
-	let arg = {name: name, color: color, icon: icon}
-	await browser.contextualIdentities.update(csid, arg)
+	if (!csidInUse(csid)) {
+		let name = randName()
+		let color = randColor()
+		let icon = config.ephemeralIcon
+		let arg = {name: name, color: color, icon: icon}
+		await browser.contextualIdentities.update(csid, arg)
+	}
 }
 
 async function toConfined(arg) {
