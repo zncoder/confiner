@@ -41,8 +41,7 @@ async function handleRequest(arg) {
 	}
 
 	try {
-		let host = new URL(arg.url).host
-		let csid = await getOrCreateContainer(host)
+		let csid = await getOrCreateContainer(arg.url)
 		await browser.tabs.create(
 			{
 				url: arg.url,
@@ -75,14 +74,14 @@ function matchHost(a, b) {
 	return a === b || a.endsWith("."+b) || b.endsWith("."+a)
 }
 
-function matchHostSuffix(prefix, host) {
-	if (prefix === host) {
+function matchHostSuffix(suffix, host) {
+	if (suffix === host) {
 		return true
 	}
-	if (!prefix.startsWith('.')) {
-		prefix = '.' + prefix
+	if (!suffix.startsWith('.')) {
+		suffix = '.' + suffix
 	}
-	return host.endsWith(prefix)
+	return host.endsWith(suffix)
 }
 
 function randColor() {
@@ -90,10 +89,16 @@ function randColor() {
 	return config.randColors[i]
 }
 
-async function getOrCreateContainer(host) {
+async function getOrCreateContainer(url) {
+	let u = new URL(url)
 	// named
 	for (const [k, v] of Object.entries(state.hostSuffixContainers)) {
-		if (matchHostSuffix(k, host)) {
+		if (matchHostSuffix(k, u.host)) {
+			return v.csid
+		}
+	}
+	for (const [k, v] of Object.entries(state.urlPrefixContainers)) {
+		if (k === url || url.startsWith(k+'/')) {
 			return v.csid
 		}
 	}
