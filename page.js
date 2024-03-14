@@ -10,12 +10,21 @@ async function initPage() {
 
 	let bg = await browser.runtime.getBackgroundPage()
 
-	let toRand = bg.isConfined(csid)
-	if (toRand) {
+	if (bg.isConfined(csid)) {
 		enableEphemeral(bg, csid)
 	} else {
 		enableConfined(bg, csid, url)
 	}
+
+	setNote()
+}
+
+function setNote(msg) {
+	let el = sel('#note_sec')
+	if (!msg) {
+		msg = el.getAttribute('data-text')
+	}
+	el.innerText = msg
 }
 
 function sel(x) {
@@ -72,7 +81,12 @@ async function onUrlBtnClicked() {
 		path = path.substring(0, path.length-1)
 	}
 	sel('#pattern_btn').value = path
-	sel('#name_btn').placeholder = 'name the container'
+	setNameBtnPlaceholder()
+}
+
+function setNameBtnPlaceholder() {
+	let btn = sel('#name_btn')
+	btn.placeholder = btn.getAttribute('data-text')
 }
 
 async function onConfinedBtnClicked() {
