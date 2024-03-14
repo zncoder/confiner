@@ -193,13 +193,17 @@ async function toEphemeral(csid) {
 	await browser.contextualIdentities.update(csid, arg)
 }
 
-async function toConfined(csid, origName) {
-	name = origName + "·"
-	console.log(`convert ${csid} to ${name}`)
-	let arg = {name: name, color: config.siteColor, icon: config.siteIcon}
-	await browser.contextualIdentities.update(csid, arg)
+async function toConfined(arg) {
+	let csid = arg.csid
+	let hostSuffix = arg.hostSuffix
+	if (hostSuffix) {
+		name = hostSuffix + "·"
+		console.log(`convert ${csid} to ${name}`)
+		let arg = {name: name, color: config.siteColor, icon: config.siteIcon}
+		await browser.contextualIdentities.update(csid, arg)
 
-	state.hostSuffixContainers[origName] = {csid: csid, name: name}
+		state.hostSuffixContainers[hostSuffix] = {csid: csid, name: name}
+	}
 	await setSaved()
 }
 

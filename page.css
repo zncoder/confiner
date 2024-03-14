@@ -19,7 +19,7 @@ div {
 	background-color: transparent;
 }
 
-#pattern_sec {
+.pattern_sec {
 	border: 1px solid #eee;
 	margin: 4px;
 }
@@ -31,4 +31,13 @@ div {
 
 #pattern_btn {
 	color: black;
+}
+
+.input_row {
+	padding-top: 2px;
+	padding-bottom: 2px;
+}
+
+#name_btn {
+	width: 100%;
 }

@@ -72,17 +72,25 @@ async function onUrlBtnClicked() {
 		path = path.substring(0, path.length-1)
 	}
 	sel('#pattern_btn').value = path
+	sel('#name_btn').placeholder = 'name the container'
+}
+
+async function onConfinedBtnClicked() {
+	let [tab] = await browser.tabs.query({active: true, currentWindow: true})
+	let bg = await browser.runtime.getBackgroundPage()
+	let val = sel('#pattern_btn').value
+	if (sel('#host_btn').checked) {
+		bg.toConfined({hostSuffix: val, csid: tab.cookieStoreId})
+	} else {
+		bg.toConfined({urlPrefix: val, csid: tab.cookieStoreId})
+	}
+	window.close()
 }
 
 async function enableConfined(bg, csid, url) {
 	sel('#to_confined_btn').style.display = 'block'
 	sel('#to_ephemeral_btn').style.display = 'none'
-	sel("#to_confined_btn").addEventListener("click", () => {
-		let name = sel('#pattern_btn').value
-		bg.toConfined(csid, name)
-		window.close()
-	})
-
+	sel("#to_confined_btn").addEventListener("click", onConfinedBtnClicked)
 	sel('#host_btn').addEventListener('change', onHostBtnClicked)
 	sel('#url_btn').addEventListener('change', onUrlBtnClicked)
 	sel('#minus_btn').addEventListener('click', () => onMinusBtnClicked(url))
