@@ -299,28 +299,28 @@ async function gcEphemeralContainers() {
 	state.unusedContainers = unused
 }
 
-async function openUrl(url, opener, closeOpener) {
+async function openUrl(arg) {
 	await browser.tabs.create(
 		{
-			url: url,
-			cookieStoreId: config.defaultContainer,
-			openerTabId: opener.id,
-			index: opener.index + 1,
+			url: arg.url,
+			cookieStoreId: arg.csid ? arg.csid : config.defaultContainer,
+			openerTabId: arg.opener.id,
+			index: arg.opener.index + 1,
 			active: true
 		}
 	)
-	if (closeOpener) {
-		await browser.tabs.remove(opener.id)
+	if (arg.closeOpener) {
+		await browser.tabs.remove(arg.opener.id)
 	}
 }
 
 function handleMenu(info, tab) {
 	switch (info.menuItemId) {
-	case "open-link":
-		openUrl(info.linkUrl, tab, false)
+	case 'open-link':
+		openUrl({url: info.linkUrl, opener: tab})
 		break
-	case "reopen-tab":
-		openUrl(tab.url, tab, true)
+	case 'reopen-tab':
+		openUrl({url: tab.url, opener: tab, closeOpener: true})
 		break
 	}
 }
@@ -334,9 +334,9 @@ async function init() {
 		["blocking"]
 	)
 
-	browser.contextMenus.create({id: "open-link", title: "Open link in new tab", contexts: ["link"]})
-	browser.contextMenus.create({id: "reopen-tab", title: "Reopen tab", contexts: ["page"]})
-	browser.contextMenus.onClicked.addListener(handleMenu)
+	browser.menus.create({id: "open-link", title: "Open link in new tab", contexts: ["link"]})
+	browser.menus.create({id: "reopen-tab", title: "Reopen tab", contexts: ["page"]})
+	browser.menus.onClicked.addListener(handleMenu)
 
 	setInterval(gcEphemeralContainers, config.gcInterval)
 }
