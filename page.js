@@ -15,8 +15,37 @@ async function initPage() {
 	} else {
 		enableConfined(url)
 	}
+	enableReopen(bg)
 
 	setNote()
+}
+
+function enableReopen(bg) {
+	let sec = sel('#reopen_sec')
+	let names = bg.getNames(false)
+	if (Object.keys(names).length === 0) {
+		sec.style.display = 'none'
+	} else {
+		let el = sel('#reopen_name_sel')
+		buildSelectNames(el, names, true)
+		el.addEventListener('change', reopenTabIn)
+		sec.style.display = 'block'
+	}
+}
+
+async function reopenTabIn() {
+	let [name, csid] = getSelectValue(sel('#reopen_name_sel'))
+	if (name === '…') {
+		setNote('select a name')
+		return
+	}
+	let [tab] = await browser.tabs.query({active: true, currentWindow: true})
+	let bg = await browser.runtime.getBackgroundPage()
+	if (csid === '_invalid_') {
+		csid = undefined
+	}
+	await bg.openUrl({url: tab.url, opener: tab, closeOpener: true, csid: csid})
+	window.close()
 }
 
 function setNote(msg) {
@@ -32,7 +61,7 @@ function sel(x) {
 }
 
 function hideBody() {
-	sel("#confined_sec").style.display = "none"
+	sel("#confined_sec").style.display = 'none'
 	sel("#note_sec").innerText = "Cannot toggle default container"
 }
 
@@ -100,15 +129,33 @@ function initNameSelect(bg, urlsOnly) {
 	sec.setAttribute('data-sel', '1')
 	sel('#name_btn').style.display = 'none'
 
-	let el = sel('#choose_name_sel')
-	for (const [name, csid] of Object.entries(names)) {
+	buildSelectNames(sel('#choose_name_sel'), names)
+	sel('#plus_btn').addEventListener('click', onPlusBtnClicked)
+	return true
+}
+
+function buildSelectNames(el, names, placeholder) {
+	let entries = Object.entries(names)
+	if (entries.length === 0) {
+		return
+	}
+	if (placeholder) {
+		let opt = document.createElement('option')
+		opt.text = '…'
+		opt.value = '_invalid_'
+		el.appendChild(opt)
+		opt = document.createElement('option')
+		opt.text = '*as new*'
+		opt.value = '_invalid_'
+		el.appendChild(opt)
+	}
+	entries.sort()
+	for (const [name, csid] of entries) {
 		let opt = document.createElement('option')
 		opt.text = name
 		opt.value = csid
 		el.appendChild(opt)
 	}
-	sel('#plus_btn').addEventListener('click', onPlusBtnClicked)
-	return true
 }
 
 function onPlusBtnClicked() {
@@ -147,12 +194,15 @@ async function onConfinedBtnClicked() {
 	window.close()
 }
 
+function getSelectValue(el) {
+	let opt = el.options[el.selectedIndex]
+	return [opt.text, opt.value]
+}
+
 async function getNameSecValue() {
 	let sec = sel('#choose_name_sec')
 	if (sec.getAttribute('data-sel') === '1') {
-		let el = sel('#choose_name_sel')
-		let opt = el.options[el.selectedIndex]
-		return [opt.text, opt.value]
+		return getSelectValue(sel('#choose_name_sel'))
 	} else {
 		let name = sel('#name_btn').value
 		if (!nameRe.test(name)) {
