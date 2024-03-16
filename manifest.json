@@ -2,7 +2,7 @@
 	"manifest_version": 2,
 	"name": "One-Click Container",
 	"description": "Confine every site to either an ephemeral container or a site specific container",
-	"version": "1.10.0",
+	"version": "1.11.0",
 	"icons": {
 		"48": "icons/48.png"
 	},

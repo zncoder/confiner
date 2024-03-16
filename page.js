@@ -3,14 +3,13 @@ async function initPage() {
 	let csid = tab.cookieStoreId
 	let u = new URL(tab.url)
 	let url = `${u.protocol}//${u.host}${u.pathname}`
-	console.log(`page for csid:${csid} url:${url}`)
+	// console.log(`page for csid:${csid} url:${url}`)
 	if (csid === "firefox-default") {
 		hideBody()
 		return
 	}
 
 	let bg = await browser.runtime.getBackgroundPage()
-
 	if (bg.isConfined(csid, url)) {
 		enableEphemeral(bg, csid, url)
 	} else {
@@ -33,7 +32,7 @@ function sel(x) {
 }
 
 function hideBody() {
-	sel("#body_sec").style.display = "none"
+	sel("#confined_sec").style.display = "none"
 	sel("#note_sec").innerText = "Cannot toggle default container"
 }
 
@@ -83,14 +82,14 @@ async function onUrlBtnClicked() {
 	}
 	sel('#pattern_btn').value = path
 	sel('#name_sec').style.display = 'block'
-	if (!await initNameSelect()) {
+	let bg = await browser.runtime.getBackgroundPage()
+	if (!initNameSelect(bg, true)) {
 		onPlusBtnClicked()
 	}
 }
 
-async function initNameSelect() {
-	let bg = await browser.runtime.getBackgroundPage()
-	let names = bg.getUrlPrefixNames()
+function initNameSelect(bg, urlsOnly) {
+	let names = bg.getNames(urlsOnly)
 	let sec = sel('#choose_name_sec')
 	if (Object.keys(names).length === 0) {
 		sec.setAttribute('data-sel', '0')
@@ -161,7 +160,7 @@ async function getNameSecValue() {
 			return [undefined, undefined]
 		}
 		let bg = await browser.runtime.getBackgroundPage()
-		if (bg.nameInUse(name)) {
+		if (bg.urlPrefixNameInUse(name)) {
 			setNote(`${name} is in use`)
 			return [undefined, undefined]
 		}

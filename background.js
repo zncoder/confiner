@@ -60,7 +60,7 @@ async function handleRequest(arg) {
 	return {}
 }
 
-function nameInUse(name) {
+function urlPrefixNameInUse(name) {
 	name = '·' + name
 	for (const [k, v] of Object.entries(state.urlPrefixContainers)) {
 		if (v.name === name) {
@@ -84,10 +84,15 @@ function csidInUse(csid) {
 	return false
 }
 
-function getUrlPrefixNames() {
+function getNames(urlsOnly) {
 	let names = {}
+	if (!urlsOnly) {
+		for (const [k, v] of Object.entries(state.hostSuffixContainers)) {
+			names[v.name] = v.csid
+		}
+	}
 	for (const [k, v] of Object.entries(state.urlPrefixContainers)) {
-		names[v.name.substring(1)] = v.csid
+		names[v.name] = v.csid
 	}
 	return names
 }

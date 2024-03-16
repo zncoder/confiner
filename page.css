@@ -42,3 +42,13 @@ div {
 #name_btn {
 	width: 100%;
 }
+
+#reopen_sec {
+	border-top: 1px solid #eee;
+	padding: 2px;
+	display: none;
+}
+
+#action_sec {
+	padding: 2px;
+}

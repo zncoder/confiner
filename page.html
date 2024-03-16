@@ -1,37 +1,43 @@
 <!DOCTYPE html>
 
 <html>
-  <head>
-    <meta charset="utf-8">
-	<link rel="stylesheet" type="text/css" href="page.css">
-  </head>
+	<head>
+		<meta charset="utf-8">
+		<link rel="stylesheet" type="text/css" href="page.css">
+	</head>
 
-  <body>
-	<div id="body_sec">
-	  <div id="confined_sec">
-		<input type="radio" id="host_btn" name="choice" checked><label for="host_btn">Host suffix</label><br>
-		<input type="radio" id="url_btn" name="choice"><label for="url_btn">URL prefix</label>
-		<div class="pattern_sec">
-		  <div class="input_row">
-		  <input type="button" id="minus_btn" value="－" class="btn">
-		  <input type="text" id="pattern_btn" readonly disabled class="btn">
-		  </div>
-		  <div class="input_row" id="name_sec">
-			<span id="choose_name_sec" data-sel="0">
-			  <input type="button" id="plus_btn" value="＋" class="btn">
-			  <select id="choose_name_sel" class="btn"></select>
-			</span>
-			<input type="text" id="name_btn" class="btn" data-text='name the container here'>
-		  </div>
+	<body>
+		<div id="confined_sec">
+			<input type="radio" id="host_btn" name="choice" checked><label for="host_btn">Host suffix</label><br>
+			<input type="radio" id="url_btn" name="choice"><label for="url_btn">URL prefix</label>
+			<div class="pattern_sec">
+				<div class="input_row">
+					<input type="button" id="minus_btn" value="－" class="btn">
+					<input type="text" id="pattern_btn" readonly disabled class="btn">
+				</div>
+				<div class="input_row" id="name_sec">
+					<span id="choose_name_sec" data-sel="0">
+						<input type="button" id="plus_btn" value="＋" class="btn">
+						<select id="choose_name_sel" class="btn"></select>
+					</span>
+					<input type="text" id="name_btn" class="btn" data-text='name the container here'>
+				</div>
+			</div>
 		</div>
-	  </div>
-	  <div>
-		<input type="button" class="action_btn" id="to_ephemeral_btn" value="switch to ephemeral container">
-		<input type="button" class="action_btn" id="to_confined_btn" value="switch to confined container">
-	  </div>
-	</div>
-	<div id="note_sec" data-text="switch tab to update addressbar"></div>
+		<div>
+			<div>
+				<div id="action_sec">
+					<input type="button" class="action_btn" id="to_ephemeral_btn" value="switch to ephemeral container">
+					<input type="button" class="action_btn" id="to_confined_btn" value="switch to confined container">
+				</div>
+				<div id="reopen_sec">
+					<label for="reopen_name_sel">reopen tab in</label>
+					<select id="reopen_name_sel" class="btn"></select>
+				</div>
+			</div>
+		</div>
+		<div id="note_sec" data-text="switch tab to update addressbar"></div>
 
-	<script src="page.js"></script>
-  </body>
+		<script src="page.js"></script>
+	</body>
 </html>
