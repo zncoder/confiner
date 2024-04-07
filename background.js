@@ -264,7 +264,7 @@ async function toConfined(arg) {
 
 		state.hostSuffixContainers[hostSuffix] = {csid: csid, name: name}
 	} else if (urlPrefix) {
-		let name = '·' + arg.name
+		let name = arg.name.startsWith("·") ? arg.name : "·" + arg.name
 		console.log(`convert ${csid} to ${name}`)
 		await browser.contextualIdentities.update(
 			csid,
