@@ -92,10 +92,12 @@ function onMinusBtnClicked(url) {
 		} else {
 			pat.value = ss.slice(1).join('.')
 		}
+	} else if (pat.value === '/') {
+		pat.value = new URL(url).pathname
 	} else {
 		let i = pat.value.lastIndexOf('/')
 		if (i === 0) {
-			pat.value = new URL(url).pathname
+			pat.value = '/'
 		} else {
 			pat.value = pat.value.substring(0, i)
 		}
